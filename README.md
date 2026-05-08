@@ -110,7 +110,7 @@ Inserting disk...
 | `EXTRACT <name> [dest]`     | Copy disk file to host (read-throttled)       |
 | `DELETE` / `RM <name>`      | Delete a file from disk                       |
 | `FORMAT`                    | Erase all files on disk                       |
-| `PROTECT ON|OFF`            | Toggle write protection                       |
+| `PROTECT [ON|OFF]`          | Toggle write protection                       |
 | `MEDIA`                     | List supported media types                    |
 | `HOSTLS [path]`             | List host directory contents                  |
 | `CD <path>`                 | Change host directory                         |
@@ -131,3 +131,4 @@ Released under the [MIT License](LICENSE).
 ## Author
 
 Chris McGimpsey-Jones (2026)
+chrisjones.unixmen@gmail.com
