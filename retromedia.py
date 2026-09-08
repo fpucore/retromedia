@@ -1,12 +1,15 @@
 #!/usr/bin/env python3
 """
 RetroMedia - Virtual removable & fixed media emulator
+
 Copyright (c) 2026 Chris McGimpsey-Jones
 Released under the MIT License
+
 https://github.com/fpucore/retromedia
 
 Authentic capacities, transfer speeds, write buffering, Audio CD (CD-DA) creation,
-branded USB/Optical media, Overburn toggles, Burning Engines, and playback via FFmpeg.
+LightScribe physical etching, Multi-Era Copy Protection, Pirate/Hacker Overrides, 
+Drive Rigs, Cross-transfers, Cloning, Batch Ripping, and Playback via FFmpeg.
 """
 
 import os
@@ -23,6 +26,13 @@ import tempfile
 import subprocess
 from typing import Dict, List, Optional, Tuple
 from datetime import datetime
+
+# ==== Optional Image Processing ====
+try:
+    from PIL import Image, ImageOps, ImageDraw, ImageEnhance, ImageFont
+    HAS_PIL = True
+except ImportError:
+    HAS_PIL = False
 
 KB = 1024
 MB = 1024 * KB
@@ -78,32 +88,27 @@ MEDIA_SPECS = {
     "usb-1.1-64m": {
         "size": 64 * MB, "read": 1_000_000, "write": 600_000,
         "seek_ms": 0, "buffer": 0, "label": "Trek ThumbDrive 64MB (USB 1.1)",
-        "family": "usb", "recordable": True, "rewritable": True,
-        "type": "data", "theatrics": False,
+        "family": "usb", "recordable": True, "rewritable": True, "type": "data", "theatrics": False,
     },
     "usb-2.0-4g": {
         "size": 4 * GB, "read": 18 * MB, "write": 4 * MB,
         "seek_ms": 0, "buffer": 0, "label": "Kingston DataTraveler 4GB (USB 2.0)",
-        "family": "usb", "recordable": True, "rewritable": True,
-        "type": "data", "theatrics": False,
+        "family": "usb", "recordable": True, "rewritable": True, "type": "data", "theatrics": False,
     },
     "usb-3.0-64g": {
         "size": 64 * GB, "read": 100 * MB, "write": 35 * MB,
         "seek_ms": 0, "buffer": 0, "label": "Corsair Flash Voyager 64GB (USB 3.0)",
-        "family": "usb", "recordable": True, "rewritable": True,
-        "type": "data", "theatrics": False,
+        "family": "usb", "recordable": True, "rewritable": True, "type": "data", "theatrics": False,
     },
     "usb-3.2-256g": {
         "size": 256 * GB, "read": 400 * MB, "write": 240 * MB,
         "seek_ms": 0, "buffer": 0, "label": "SanDisk Extreme PRO 256GB (USB 3.2)",
-        "family": "usb", "recordable": True, "rewritable": True,
-        "type": "data", "theatrics": False,
+        "family": "usb", "recordable": True, "rewritable": True, "type": "data", "theatrics": False,
     },
     "usb-3.2-1t": {
         "size": 1000 * GB, "read": 1050 * MB, "write": 1000 * MB,
         "seek_ms": 0, "buffer": 0, "label": "Samsung T7 Portable SSD 1TB (USB 3.2 Gen 2)",
-        "family": "usb", "recordable": True, "rewritable": True,
-        "type": "data", "theatrics": False,
+        "family": "usb", "recordable": True, "rewritable": True, "type": "data", "theatrics": False,
     },
 
     # ---- Audio Optical (CD-DA / Red Book) Branded & Generic ----
@@ -204,6 +209,11 @@ MEDIA_SPECS = {
         "seek_ms": 2000, "buffer": 2 * MB, "label": "Imation CD-RW 4x (700MB)",
         "family": "optical", "recordable": True, "rewritable": True, "type": "data",
     },
+    "kodak-gold-74": {
+        "size": 650 * MB, "read": 614_400, "write": 614_400,
+        "seek_ms": 1500, "buffer": 2 * MB, "label": "Kodak Gold CD-R 4x (650MB)",
+        "family": "optical", "recordable": True, "rewritable": False, "type": "data",
+    },
 
     # ---- DVD ----
     "dvd-r": {
@@ -241,19 +251,9 @@ MEDIA_SPECS = {
         "seek_ms": 1000, "buffer": 2 * MB, "label": "DVD-RAM 2.6GB",
         "family": "optical", "recordable": True, "rewritable": True, "type": "data",
     },
-    "dvd-ram-5.2": {
-        "size": 5_200_000_000, "read": 5_540_000, "write": 1_385_000,
-        "seek_ms": 1400, "buffer": 2 * MB, "label": "DVD-RAM 5.2GB (double-sided)",
-        "family": "optical", "recordable": True, "rewritable": True, "type": "data",
-    },
     "dvd-ram-4.7": {
         "size": 4_700_000_000, "read": 11_080_000, "write": 2_770_000,
         "seek_ms": 1200, "buffer": 4 * MB, "label": "DVD-RAM 4.7GB",
-        "family": "optical", "recordable": True, "rewritable": True, "type": "data",
-    },
-    "dvd-ram-9.4": {
-        "size": 9_400_000_000, "read": 11_080_000, "write": 2_770_000,
-        "seek_ms": 1600, "buffer": 4 * MB, "label": "DVD-RAM 9.4GB (double-sided)",
         "family": "optical", "recordable": True, "rewritable": True, "type": "data",
     },
 
@@ -263,24 +263,9 @@ MEDIA_SPECS = {
         "seek_ms": 1800, "buffer": 8 * MB, "label": "HD DVD-R 1x (15GB)",
         "family": "optical", "recordable": True, "rewritable": False, "type": "data",
     },
-    "hd-dvd-r-dl": {
-        "size": 30 * GB, "read": 18_280_000, "write": 4_570_000,
-        "seek_ms": 2400, "buffer": 8 * MB, "label": "HD DVD-R DL 1x (30GB)",
-        "family": "optical", "recordable": True, "rewritable": False, "type": "data",
-    },
     "hd-dvd-rw": {
         "size": 15 * GB, "read": 18_280_000, "write": 4_570_000,
         "seek_ms": 1800, "buffer": 8 * MB, "label": "HD DVD-RW 1x (15GB)",
-        "family": "optical", "recordable": True, "rewritable": True, "type": "data",
-    },
-    "hd-dvd-rw-dl": {
-        "size": 30 * GB, "read": 18_280_000, "write": 4_570_000,
-        "seek_ms": 2400, "buffer": 8 * MB, "label": "HD DVD-RW DL 1x (30GB)",
-        "family": "optical", "recordable": True, "rewritable": True, "type": "data",
-    },
-    "hd-dvd-ram": {
-        "size": 20 * GB, "read": 18_280_000, "write": 4_570_000,
-        "seek_ms": 1800, "buffer": 8 * MB, "label": "HD DVD-RAM 20GB",
         "family": "optical", "recordable": True, "rewritable": True, "type": "data",
     },
 
@@ -300,20 +285,10 @@ MEDIA_SPECS = {
         "seek_ms": 2400, "buffer": 8 * MB, "label": "BD-R DL 2x (50GB)",
         "family": "optical", "recordable": True, "rewritable": False, "type": "data",
     },
-    "bd-re-dl": {
-        "size": 50 * GB, "read": 72_000_000, "write": 9_000_000,
-        "seek_ms": 2400, "buffer": 8 * MB, "label": "BD-RE DL 2x (50GB)",
-        "family": "optical", "recordable": True, "rewritable": True, "type": "data",
-    },
     "bd-r-xl": {
         "size": 100 * GB, "read": 72_000_000, "write": 9_000_000,
         "seek_ms": 3200, "buffer": 16 * MB, "label": "BD-R XL 100GB",
         "family": "optical", "recordable": True, "rewritable": False, "type": "data",
-    },
-    "bd-re-xl": {
-        "size": 100 * GB, "read": 72_000_000, "write": 9_000_000,
-        "seek_ms": 3200, "buffer": 16 * MB, "label": "BD-RE XL 100GB",
-        "family": "optical", "recordable": True, "rewritable": True, "type": "data",
     },
     "bd-r-ql": {
         "size": 128 * GB, "read": 72_000_000, "write": 9_000_000,
@@ -358,17 +333,84 @@ MEDIA_SPECS = {
     },
 }
 
+# ====
+# Hardware Drive Specifications & Features
+# ====
+DRIVE_MODELS = {
+    # -- Floppy Drives --
+    "COMMODORE-1541": {
+        "family": "floppy", "read": 400, "write": 400, 
+        "label": "Commodore 1541 5.25\" Floppy Drive", "features": []
+    },
+    "APPLE-DISK-II": {
+        "family": "floppy", "read": 15 * KB, "write": 15 * KB, 
+        "label": "Apple Disk II 5.25\" Floppy Drive", "features": []
+    },
+    "CHINON-FZ354": {
+        "family": "floppy", "read": 31_744, "write": 28_160, 
+        "label": "Chinon FZ-354 Amiga 3.5\" Floppy Drive", "features": []
+    },
+    "TEAC-FD-235HF": {
+        "family": "floppy", "read": 63_488, "write": 56_320, 
+        "label": "TEAC FD-235HF 3.5\" Floppy Drive", "features": []
+    },
+    "IBM-PS2-Model-30": {
+        "family": "floppy", "read": 63_488, "write": 56_320, 
+        "label": "IBM PS2 Model 30 3.5\" Floppy Drive", "features": []
+    },
+    "SONY-MPF920": {
+        "family": "floppy", "read": 63_488, "write": 56_320, 
+        "label": "Sony MPF920 3.5\" Floppy Drive", "features": []
+    },
+    
+    # -- Zip Drives --
+    "ZIP-100-PARALLEL": {
+        "family": "magnetic", "read": 50 * KB, "write": 50 * KB, 
+        "label": "Iomega Zip 100 (Parallel Port)", "features": []
+    },
+    
+    # -- Optical Drives (CD/DVD/BD) --
+    "SONY-CDU31A": {
+        "family": ("optical", "audio-cd"), "read": 300 * KB, "write": 0, 
+        "label": "Sony CDU31A 1x/2x Caddy CD-ROM", "features": []
+    },
+    "PLEXTOR-4012A": {
+        "family": ("optical", "audio-cd"), "read": 6000 * KB, "write": 1800 * KB, 
+        "label": "Plextor PlexWriter 40/12/40A", "features": ["burn-proof"]
+    },
+    "YAMAHA-CRWF1": {
+        "family": ("optical", "audio-cd"), "read": 6600 * KB, "write": 3600 * KB, 
+        "label": "Yamaha CRW-F1 (DiscT@2)", "features": ["burn-proof", "litescribe"]
+    },
+    "HP-DVD1040": {
+        "family": ("optical", "audio-cd"), "read": 22000 * KB, "write": 11000 * KB, 
+        "label": "HP dvd1040 LightScribe DVD Writer", "features": ["burn-proof", "litescribe"]
+    },
+    "PIONEER-DVR108": {
+        "family": ("optical", "audio-cd"), "read": 22000 * KB, "write": 22000 * KB, 
+        "label": "Pioneer DVR-108 16x DVD±RW", "features": ["burn-proof"]
+    },
+    "TOSHIBA-SDH903A": {
+        "family": ("optical", "audio-cd"), "read": 18000 * KB, "write": 0, 
+        "label": "Toshiba SD-H903A HD-DVD/DVD-ROM", "features": []
+    },
+    "TOSHIBA-SDH903A-V2": {
+        "family": ("optical", "audio-cd"), "read": 18000 * KB, "write": 18000 * KB, 
+        "label": "Toshiba SD-H903A-V2 HD-DVD/DVD±RW", "features": ["burn-proof"]
+    },
+    "PIONEER-BDR207": {
+        "family": ("optical", "audio-cd"), "read": 54000 * KB, "write": 54000 * KB, 
+        "label": "Pioneer BDR-207 Blu-ray Writer", "features": ["burn-proof"]
+    },
+    "LITEON-GENERIC-OEM": {
+        "family": ("optical", "audio-cd"), "read": 24000 * KB, "write": 24000 * KB, 
+        "label": "Lite-On Generic CD/DVD-RW", "features": ["justlink"]
+    },
+}
+
 FAMILY_ORDER = [
-    "floppy",
-    "magnetic",
-    "audio-cd",
-    "optical",
-    "minidisc",
-    "usb",
-    "hdd-vintage",
-    "hdd-modern",
-    "ssd",
-    "nvme",
+    "floppy", "magnetic", "audio-cd", "optical", "minidisc", 
+    "usb", "hdd-vintage", "hdd-modern", "ssd", "nvme"
 ]
 
 FAMILY_TITLES = {
@@ -383,8 +425,6 @@ FAMILY_TITLES = {
     "ssd": "SOLID STATE DRIVES (SATA SSD)",
     "nvme": "NVMe DRIVES",
 }
-
-THEATRICS_FAMILIES = ("hdd-vintage", "hdd-modern", "ssd", "nvme")
 
 
 def spec_theatrics(spec: dict) -> bool:
@@ -437,12 +477,15 @@ class VirtualDisk:
         self.album: str = ""
         self.created: str = ""
         self.write_protect: bool = False
+        self.protection_mode: str = "none" # "none", "safedisc", "cactus", "track0"
         self.finalized: bool = False
         self.burning_engine: str = ""
         self.toc: Dict[str, dict] = {}
         self.tracks: List[dict] = []
         self.data_blob: bytearray = bytearray()
         self.loaded = False
+        self.hardware_id: str = "GENERIC"
+        self.hardware_spec: Optional[dict] = None
 
     @classmethod
     def create(cls, path: str, media: str, label: str = "") -> "VirtualDisk":
@@ -455,6 +498,7 @@ class VirtualDisk:
         d.label = label or os.path.splitext(os.path.basename(path))[0].upper()
         d.created = datetime.now().isoformat(timespec="seconds")
         d.write_protect = False
+        d.protection_mode = "none"
         d.finalized = False
         d.burning_engine = ""
         d.toc = {}
@@ -500,6 +544,15 @@ class VirtualDisk:
     def theatrics(self) -> bool:
         return spec_theatrics(self.spec)
 
+    def get_effective_speeds(self) -> Tuple[int, int]:
+        media_r = self.spec["read"]
+        media_w = self.spec["write"]
+        if self.hardware_spec:
+            hw_r = self.hardware_spec["read"]
+            hw_w = self.hardware_spec["write"]
+            return min(media_r, hw_r), min(media_w, hw_w)
+        return media_r, media_w
+
     def save(self):
         header_obj = {
             "media": self.media,
@@ -509,6 +562,7 @@ class VirtualDisk:
             "album": self.album,
             "created": self.created,
             "write_protect": self.write_protect,
+            "protection_mode": self.protection_mode,
             "finalized": self.finalized,
             "burning_engine": self.burning_engine,
             "tracks": self.tracks,
@@ -544,6 +598,7 @@ class VirtualDisk:
             self.album = header.get("album", "")
             self.created = header["created"]
             self.write_protect = header.get("write_protect", False)
+            self.protection_mode = header.get("protection_mode", "none")
             self.finalized = header.get("finalized", False)
             self.burning_engine = header.get("burning_engine", "")
             self.tracks = header.get("tracks", [])
@@ -555,6 +610,22 @@ class VirtualDisk:
         if self.media not in MEDIA_SPECS:
             raise MediaError(f"Media type '{self.media}' is unsupported")
         self.loaded = True
+
+    def validate_drm(self, ignore_protection=False):
+        if self.protection_mode == "none" or ignore_protection:
+            return
+        
+        mode = self.protection_mode
+        if mode == "safedisc":
+            raise MediaError("SAFEDISC ERROR: Authentication data structure mismatch (Intentional bad sectors 800-10009 detected)")
+        elif mode == "securom":
+            raise MediaError("SECUROM ERROR: Subchannel topology mismatch (Data Position Measurement failure)")
+        elif mode == "cactus":
+            raise MediaError("CACTUS DATA SHIELD: Audio session unreadable by host file system (Illegal TOC subcode)")
+        elif mode == "track0":
+            raise MediaError("DISK ERROR: Track 0 weak-bit synchronization failed (Copy-protection check triggered)")
+        else:
+            raise MediaError("MEDIA IS COPY-PROTECTED: Operation prohibited by creator")
 
     # --- Audio Operations ---
     def add_track(
@@ -592,11 +663,12 @@ class VirtualDisk:
         offset = len(self.data_blob)
         orig_len = len(self.data_blob)
 
+        eff_r, eff_w = self.get_effective_speeds()
         try:
             self._throttled_copy(
                 src_path,
                 file_size,
-                spec["write"],
+                eff_w,
                 spec["seek_ms"],
                 write_mode=True,
                 progress_cb=progress_cb,
@@ -623,7 +695,8 @@ class VirtualDisk:
         })
         self.save()
 
-    def track_bytes(self, index: int) -> bytes:
+    def track_bytes(self, index: int, ignore_protection: bool = False) -> bytes:
+        self.validate_drm(ignore_protection)
         if index < 0 or index >= len(self.tracks):
             raise MediaError("Track index out of range")
         t = self.tracks[index]
@@ -674,11 +747,12 @@ class VirtualDisk:
         offset = len(self.data_blob)
         original_blob_len = len(self.data_blob)
 
+        eff_r, eff_w = self.get_effective_speeds()
         try:
             self._throttled_copy(
                 src_path,
                 size,
-                spec["write"],
+                eff_w,
                 spec["seek_ms"],
                 write_mode=True,
                 progress_cb=progress_cb,
@@ -697,17 +771,20 @@ class VirtualDisk:
         }
         self.save()
 
-    def extract_file(self, name: str, dest_path: str, progress_cb=None, host_rate: Optional[int] = None):
+    def extract_file(self, name: str, dest_path: str, progress_cb=None, host_rate: Optional[int] = None, ignore_protection: bool = False):
+        self.validate_drm(ignore_protection)
         if name not in self.toc:
             raise MediaError(f"FILE NOT FOUND: {name}")
         entry = self.toc[name]
         size, offset = entry["size"], entry["offset"]
         data = bytes(self.data_blob[offset:offset + size])
 
+        eff_r, eff_w = self.get_effective_speeds()
+
         self._throttled_copy(
             None,
             size,
-            self.spec["read"],
+            eff_r,
             self.spec["seek_ms"],
             write_mode=False,
             progress_cb=progress_cb,
@@ -896,6 +973,7 @@ class Shell:
         self.burn_proof = False
         self.justlink = False
         self.overburn = False
+        self.pirate_mode = False
         self.host_rate: Optional[int] = None
         self._audio_proc = None
         self._block_lines = 0
@@ -939,6 +1017,30 @@ class Shell:
         if self.justlink:
             return "justlink"
         return None
+
+    def intercept_protection(self, target_disk: VirtualDisk, action="read") -> bool:
+        if target_disk.protection_mode == "none":
+            return True
+        if self.pirate_mode:
+            print(f"[!] RAW OVERRIDE: Bypassing {target_disk.protection_mode.upper()} structural checks for {action}...")
+            time.sleep(0.5)
+            return True
+        try:
+            target_disk.validate_drm(ignore_protection=False)
+        except MediaError as e:
+            print(f"?{e}")
+            return False
+        return True
+
+    def check_hardware_feature(self, feature_name: str) -> bool:
+        if not self.disk or getattr(self.disk, "hardware_id", "GENERIC") == "GENERIC":
+            return True # Generic god-mode drive allows all features
+        
+        features = self.disk.hardware_spec.get("features", [])
+        if feature_name not in features:
+            print(f"?HARDWARE ERROR: The attached [{self.disk.hardware_id}] does not support '{feature_name}'.")
+            return False
+        return True
 
     def _select_new_active(self):
         if self.active in self.drives:
@@ -1057,6 +1159,9 @@ class Shell:
         if not d.tracks:
             print("?AUDIO CD IS EMPTY (use ADD / BURN to burn audio tracks)")
             return
+        
+        if not self.intercept_protection(d, "Audio Playback (TOC Read)"):
+            return
 
         if not shutil.which("ffplay"):
             print("?ffplay not found. Please install FFmpeg to play Audio CDs.")
@@ -1108,7 +1213,7 @@ class Shell:
                 sys.stdout.flush()
 
     def _play_cd_track(self, d: VirtualDisk, idx: int, track: dict, tty: bool, disc_total: float):
-        data = d.track_bytes(idx - 1)
+        data = d.track_bytes(idx - 1, ignore_protection=True)
         suffix = track.get("ext") or ".audio"
         tmp = tempfile.NamedTemporaryFile(delete=False, suffix=suffix)
         tmp.write(data)
@@ -1177,62 +1282,70 @@ class Shell:
         print("""
 RETROMEDIA COMMANDS:
 
-  CREATE <file> <media> [label]   Create a new virtual medium (Data or Audio CD)
-  LOAD <file>                     Insert / load a medium
-  EJECT                           Eject the current medium
-  INFO                            Show medium information
-  DIR / LS                        List files (or audio tracks) on medium
-  COPY <src> [dest]               Write host file → Data medium
-  EXTRACT <name|num> [dest]       Extract data file or Audio CD track → host
-  DELETE / RM <name>              Delete file from medium
-  FORMAT                          Erase medium
-  FINALIZE                        Close/finalize optical medium
-  PROTECT ON|OFF                  Toggle write protection
-  MEDIA                           List supported media types
+  CREATE <file> <media> [label]                    Create a new virtual medium (Data or Audio CD)
+  LOAD <file>                                      Insert / load a medium
+  EJECT                                            Eject the current medium
+  INFO                                             Show medium information
+  DIR / LS                                         List files (or audio tracks) on medium
+  COPY <src> [dest]                                Write host file → Data medium
+  EXTRACT <name|num> [dest]                        Extract data file or Audio CD track → host
+  DELETE / RM <name>                               Delete file from medium
+  FORMAT                                           Erase medium
+  FINALIZE                                         Close/finalize optical medium
+  LITESCRIBE <image>                               Etch a LightScribe label onto the disc
+  MEDIA                                            List supported media types
 
-BUFFER & BURN PROTECTION:
-  BURN-PROOF ON|OFF               Enable/disable Burn-Proof protection
-  JUSTLINK ON|OFF                 Enable/disable JustLink protection
-  OVERBURN ON|OFF                 Allow writing past logical disc capacity (+5%)
-  ENGINE <name>                   Set optical burning engine:
-                                    NERO     (Nero Burning ROM) [DEFAULT]
-                                    ASHAMPOO (Ashampoo Burning Studio)
-                                    ROXIO    (Roxio Easy CD Creator)
-                                    ALCOHOL  (Alcohol 120%)
-                                    CLONECD  (CloneCD)
-                                    IMGBURN  (ImgBurn)
-  BUFFER                          Show current recorder settings
-  HOSTRATE <KBps>|OFF             Cap host throughput (min with media rate)
+BUFFER, PROTECTION & COPY CONTROL:
+  PROTECTION <NONE|SAFEDISC|SECUROM|CACTUS|TRACK0> Set copy protection (Anti-Rip):
+                                                       NONE     [DEFAULT]
+                                                       SAFEDISC (Introduced in 1998 by Macrovision 
+                                                                  Corporation to disrupt optical 
+                                                                  disc duplication.)
+                                                       SECUROM  (Introduced in 1998 by Sony DADC to 
+                                                                  prevent copying and reverse 
+                                                                  engineering of software.)
+                                                       CACTUS   (Developed by Israeli firm Midbar 
+                                                                  Technologies, Cactus Data Shield 
+                                                                  is copy protection for audio CDs.) 
+                                                       TRACK0   (1980s floppy disk copy protection 
+                                                                  using weak-bit and track 
+                                                                  anomalies.)
+  PIRATE ON|OFF                                    Toggle Admin Mode to bypass copy protections
+  CLONE [dest_file.iso]                            Export a raw sector-by-sector clone
+  RIP                                              Batch extract all tracks from an Audio CD
+  BURN-PROOF ON|OFF                                Enable/disable Burn-Proof protection
+  JUSTLINK ON|OFF                                  Enable/disable JustLink protection
+  OVERBURN ON|OFF                                  Allow writing past logical disc capacity (+5%)
+  ENGINE <name>                                    Set optical burning engine:
+                                                       NERO     (Nero Burning ROM) [DEFAULT]
+                                                       ASHAMPOO (Ashampoo Burning Studio)
+                                                       ROXIO    (Roxio Easy CD Creator)
+                                                       ALCOHOL  (Alcohol 120%)
+                                                       CLONECD  (CloneCD)
+                                                       IMGBURN  (ImgBurn)
+  BUFFER                                           Show current recorder settings
+  HOSTRATE <KBps>|OFF                              Cap host throughput (min with media rate)
 
 AUDIO CD COMMANDS:
-  ADD / BURN <audio> [title]      Burn an audio track onto the Audio CD
-  PLAY [track_number]             Play the virtual Audio CD using ffplay
-  ARTIST <name>                   Set disc artist
-  ALBUM <title>                   Set disc album title
+  ADD / BURN <audio> [title]                       Burn an audio track onto the Audio CD
+  PLAY [track_number]                              Play the virtual Audio CD using ffplay
+  ARTIST <name>                                    Set disc artist
+  ALBUM <title>                                    Set disc album title
 
 DRIVE RIG COMMANDS:
-  ATTACH <slot> <file>            Load a drive into the rig
-  DETACH <slot>                   Remove a drive from the rig
-  DRIVES                          List all attached drives
-  USE <slot>                      Switch active drive
-  XFER <slot>:<file> <slot>:<file> Copy file between drives
-  XMOVE <slot>:<file> <slot>:<file> Move file between drives
+  ATTACH <slot> <file> [MODEL_ID]                  Load a drive into the rig (e.g. TEAC-FD235HF)
+  DETACH <slot>                                    Remove a drive from the rig
+  HARDWARE                                         List authentic historical drive models
+  DRIVES                                           List all attached drives
+  USE <slot>                                       Switch active drive
+  XFER <slot>:<file> <slot>:<file>                 Copy file between drives
+  XMOVE <slot>:<file> <slot>:<file>                Move file between drives
 
 HOST COMMANDS:
-  HOSTLS [path]                   List host directory files
-  CD <path>                       Change host directory
-  PWD                             Show current host directory
-  QUIT / EXIT                     Leave program
-
-EXAMPLES:
-  # Create and burn an Audio CD using Nero Burning ROM
-  CREATE mixtape.cda cd-audio-80 "Summer Mix 2001"
-  ARTIST "Retro Artists"
-  ENGINE NERO
-  ADD ~/music/track1.flac "Opening Theme"
-  ADD ~/music/track2.wav "Sunset Drive"
-  FINALIZE
-  PLAY                            # Plays with terminal CD visualizer
+  HOSTLS [path]                                    List host directory files
+  CD <path>                                        Change host directory
+  PWD                                              Show current host directory
+  QUIT / EXIT                                      Leave program
 """)
 
     def cmd_media(self, *args):
@@ -1328,9 +1441,15 @@ EXAMPLES:
 
     def cmd_attach(self, *args):
         if len(args) < 2:
-            print("Usage: ATTACH <slot> <file>")
+            print("Usage: ATTACH <slot> <file> [MODEL_ID]")
             return
         slot, path = args[0], args[1]
+        hw_id = args[2].upper() if len(args) > 2 else "GENERIC"
+
+        if hw_id != "GENERIC" and hw_id not in DRIVE_MODELS:
+            print(f"?UNKNOWN HARDWARE: {hw_id} (Type HARDWARE for a list)")
+            return
+            
         if slot in self.drives:
             print(f"?SLOT OCCUPIED: '{slot}' (DETACH first)")
             return
@@ -1340,14 +1459,41 @@ EXAMPLES:
         try:
             d = VirtualDisk(path)
             d.load()
+            
+            # Apply Hardware Pairing
+            if hw_id != "GENERIC":
+                hw_spec = DRIVE_MODELS[hw_id]
+                family_match = hw_spec["family"]
+                media_fam = d.spec["family"]
+                
+                if (isinstance(family_match, tuple) and media_fam not in family_match) or \
+                   (isinstance(family_match, str) and media_fam != family_match):
+                    print(f"?HARDWARE MISMATCH: You cannot insert {d.spec['label']} into a {hw_spec['label']}.")
+                    return
+                
+                d.hardware_id = hw_id
+                d.hardware_spec = hw_spec
+
             self.drives[slot] = d
             if self.active is None:
                 self.active = slot
             self._play_spinup(d.spec)
             print()
             self._show_disk_summary(d, path, slot=slot)
+            if d.hardware_spec:
+                print(f"  Hardware:        {d.hardware_spec['label']} [{hw_id}]\n")
         except Exception as e:
             print(f"?ATTACH FAILED: {e}")
+
+    def cmd_hardware(self, *args):
+        print("\n───── LEGACY HARDWARE DRIVES ─────")
+        print(f"{'MODEL ID':<20}{'READ MAX':>12}{'WRITE MAX':>12}  DESCRIPTION")
+        print("-" * 75)
+        for hw_id, spec in DRIVE_MODELS.items():
+            r_str = self.fmt_size(spec["read"])+"/s" if spec["read"] else "N/A"
+            w_str = self.fmt_size(spec["write"])+"/s" if spec["write"] else "Read-Only"
+            print(f"{hw_id:<20}{r_str:>12}{w_str:>12}  {spec['label']}")
+        print("\nUsage: ATTACH <slot> <file> [MODEL ID]\n")
 
     def _show_disk_summary(self, d: VirtualDisk, path: str, slot: Optional[str] = None):
         spec = d.spec
@@ -1363,6 +1509,7 @@ EXAMPLES:
             print(f"  Playtime:        {fmt_time(d.used_seconds)} / {fmt_time(d.max_seconds)} ({len(d.tracks)} tracks)")
         else:
             print(f"  Capacity:        {self.fmt_size(d.used)} / {self.fmt_size(d.size)} ({len(d.toc)} files)")
+        print(f"  Protection Mode: {d.protection_mode.upper()}")
         print(f"  Finalized:       {'YES' if d.finalized else 'NO'}\n")
 
     def cmd_detach(self, *args):
@@ -1442,9 +1589,73 @@ EXAMPLES:
             print(f"  Buffer:          {self.fmt_size(spec['buffer']) if spec['buffer'] else 'none'}")
             print(f"  Write-Protected: {'YES' if d.write_protect else 'NO'}")
             print(f"  Finalized:       {'YES' if d.finalized else 'NO'}")
+        
+        print(f"  Protection Mode: {d.protection_mode.upper()}")
+        print(f"  Pirate Override: {'ACTIVE' if self.pirate_mode else 'DISABLED'}")
         if d.finalized and d.burning_engine:
             print(f"  Burn Eng.:       {d.burning_engine}")
             print(f"  Created:         {d.created}\n")
+
+    def cmd_protection(self, *args):
+        if not self.disk:
+            print("?NO DISK INSERTED")
+            return
+        modes = ["NONE", "SAFEDISC", "SECUROM", "CACTUS", "TRACK0"]
+        if not args or args[0].upper() not in modes:
+            print(f"Usage: PROTECTION <{' | '.join(modes)}>")
+            return
+        
+        mode = args[0].upper()
+        self.disk.protection_mode = mode.lower()
+        self.disk.save()
+        
+        descriptions = {
+            "NONE": "Standard unprotected media",
+            "SAFEDISC": "SafeDisc intentional bad sector protection active",
+            "SECUROM": "SecuROM subchannel geometry and DPM protection active",
+            "CACTUS": "Cactus Data Shield audio-session obfuscation active",
+            "TRACK0": "1980s Floppy Weak-Bit / Track 0 protection active"
+        }
+        print(f"✓ Protection mode set to: {mode}")
+        print(f"  {descriptions[mode]}\n")
+
+    def cmd_pirate(self, *args):
+        if not args or args[0].upper() not in ("ON", "OFF"):
+            status = "ACTIVE" if self.pirate_mode else "DISABLED"
+            print(f"Pirate Mode: {status}  (Usage: PIRATE ON|OFF)\n")
+            return
+        
+        on = args[0].upper() == "ON"
+        self.pirate_mode = on
+        if on:
+            print("\n⚠ PIRATE MODE ENGAGED: Advanced sector overrides and protection bypasses enabled.\n")
+        else:
+            print("\n✓ Pirate mode disengaged. Standard DRM enforcement restored.\n")
+
+    def cmd_burnproof(self, *args):
+        if not args or args[0].upper() not in ("ON", "OFF"):
+            print("Usage: BURN-PROOF ON|OFF")
+            return
+        self.burn_proof = args[0].upper() == "ON"
+        if self.burn_proof:
+            self.justlink = False
+        print(f"Burn-Proof: {'ON' if self.burn_proof else 'OFF'}\n")
+
+    def cmd_justlink(self, *args):
+        if not args or args[0].upper() not in ("ON", "OFF"):
+            print("Usage: JUSTLINK ON|OFF")
+            return
+        self.justlink = args[0].upper() == "ON"
+        if self.justlink:
+            self.burn_proof = False
+        print(f"JustLink: {'ON' if self.justlink else 'OFF'}\n")
+        
+    def cmd_overburn(self, *args):
+        if not args or args[0].upper() not in ("ON", "OFF"):
+            print("Usage: OVERBURN ON|OFF")
+            return
+        self.overburn = args[0].upper() == "ON"
+        print(f"Overburn (+5% optical capacity): {'ON' if self.overburn else 'OFF'}\n")
 
     def cmd_engine(self, *args):
         if not args or args[0].upper() not in self.engines:
@@ -1533,6 +1744,10 @@ EXAMPLES:
 
         try:
             print(f"[{self.burn_engine}] Preparing to write Audio track...")
+            if self.burn_proof and not self.check_hardware_feature("burn-proof"):
+                return
+            if self.justlink and not self.check_hardware_feature("justlink"):
+                return
             self.progress_start()
             self.disk.add_track(
                 src,
@@ -1563,6 +1778,10 @@ EXAMPLES:
         try:
             if self.disk.spec["family"] in ("optical", "audio-cd"):
                 print(f"[{self.burn_engine}] Caching data...")
+            if self.burn_proof and not self.check_hardware_feature("burn-proof"):
+                return
+            if self.justlink and not self.check_hardware_feature("justlink"):
+                return
             self.progress_start()
             self.disk.add_file(
                 src,
@@ -1583,6 +1802,9 @@ EXAMPLES:
         if not args:
             print("Usage: EXTRACT <name_or_track_num> [dest_path]")
             return
+            
+        if not self.intercept_protection(self.disk, "Extraction"): 
+            return
 
         d = self.disk
         if d.is_audio:
@@ -1593,7 +1815,7 @@ EXAMPLES:
                     return
                 t = d.tracks[track_num - 1]
                 dest = os.path.expanduser(args[1]) if len(args) > 1 else f"track_{track_num:02d}_{t['title']}{t['ext']}"
-                data = d.track_bytes(track_num - 1)
+                data = d.track_bytes(track_num - 1, ignore_protection=True)
                 with open(dest, "wb") as f:
                     f.write(data)
                 print(f"✓ Extracted Track {track_num:02d} → {dest}\n")
@@ -1604,10 +1826,49 @@ EXAMPLES:
             dest = os.path.expanduser(args[1]) if len(args) > 1 else name
             try:
                 self.progress_start()
-                d.extract_file(name, dest, progress_cb=self.progress, host_rate=self.host_rate)
+                d.extract_file(name, dest, progress_cb=self.progress, host_rate=self.host_rate, ignore_protection=True)
                 print(f"✓ Extracted {name} → {dest}\n")
             except Exception as e:
                 print(f"\n?EXTRACT FAILED: {e}")
+
+    def cmd_clone(self, *args):
+        if not self.disk:
+            print("?NO DISK INSERTED")
+            return
+        if not self.intercept_protection(self.disk, "Raw Image Clone"): 
+            return
+        
+        dest = args[0] if args else f"{self.disk.label}.iso"
+        print(f"Cloning raw sector data to {dest}...")
+        try:
+            self.progress_start()
+            shutil.copyfile(self.disk.path, dest)
+            self.progress(100, 100, "CLONING")
+            print(f"✓ Clone complete.\n")
+        except Exception as e:
+            print(f"\n?CLONE FAILED: {e}")
+
+    def cmd_rip(self, *args):
+        if not self.disk:
+            print("?NO DISK INSERTED")
+            return
+        if not self.disk.is_audio: 
+            print("?RIP is for Audio CDs only. Use CLONE or EXTRACT for data media.")
+            return
+        if not self.intercept_protection(self.disk, "Batch Ripping"): 
+            return
+        
+        print(f"Ripping {len(self.disk.tracks)} tracks from {self.disk.label}...")
+        try:
+            for i, t in enumerate(self.disk.tracks):
+                dest = f"Track_{t['track']:02d}_{t['title']}{t['ext']}"
+                print(f" -> Ripping Track {t['track']:02d}...", end="", flush=True)
+                with open(dest, "wb") as f:
+                    f.write(self.disk.track_bytes(i, ignore_protection=True))
+                print(" Done.")
+            print(f"✓ Batch Rip complete.\n")
+        except Exception as e:
+            print(f"\n?RIP FAILED: {e}")
 
     def _parse_slot_ref(self, ref: str) -> Tuple[str, str]:
         if ":" not in ref:
@@ -1645,6 +1906,10 @@ EXAMPLES:
         if src.is_audio:
             print(f"?{verb} FAILED: Source is an AUDIO CD. Use EXTRACT to rip tracks.")
             return
+        
+        if not self.intercept_protection(src, f"Cross-Drive {verb}"):
+            return
+
         if not src.has_file(src_name):
             print(f"?{verb} FAILED: FILE NOT FOUND: {src_name}")
             return
@@ -1680,7 +1945,9 @@ EXAMPLES:
         try:
             src_spec = src.spec
             dst_spec = dst.spec
-            eff = min(src_spec["read"], dst_spec["write"])
+            src_eff_r, _ = src.get_effective_speeds()
+            _, dst_eff_w = dst.get_effective_speeds()
+            eff = min(src_eff_r, dst_eff_w)
             if self.host_rate:
                 eff = min(eff, self.host_rate)
 
@@ -1698,10 +1965,20 @@ EXAMPLES:
                 tmp_path,
                 progress_cb=lambda *a: self.progress(a[0], a[1], "XFER-READ" if a[2] in ("READING", "WRITING") else a[2], *a[3:]),
                 host_rate=self.host_rate,
+                ignore_protection=True
             )
 
             if dst.spec["family"] in ("optical", "audio-cd"):
                 print(f"[{self.burn_engine}] Caching data...")
+            dst_hw = getattr(dst, "hardware_id", "GENERIC")
+            dst_features = dst.hardware_spec.get("features", []) if dst_hw != "GENERIC" else ["burn-proof", "justlink"]
+            
+            if self.burn_proof and "burn-proof" not in dst_features:
+                print(f"?HARDWARE ERROR: The destination drive [{dst_hw}] does not support 'burn-proof'.")
+                return
+            if self.justlink and "justlink" not in dst_features:
+                print(f"?HARDWARE ERROR: The destination drive [{dst_hw}] does not support 'justlink'.")
+                return
             self.progress_start()
             dst.add_file(
                 tmp_path,
@@ -1805,38 +2082,146 @@ EXAMPLES:
         except Exception as e:
             print(f"?DELETE FAILED: {e}")
 
-    def cmd_protect(self, *args):
-        if not self.disk or not args or args[0].upper() not in ("ON", "OFF"):
-            print("Usage: PROTECT ON|OFF")
+    def cmd_litescribe(self, *args):
+        if not self.disk:
+            print("?NO DISK INSERTED")
             return
-        on = args[0].upper() == "ON"
-        self.disk.set_write_protect(on)
-        print(f"Write protection: {'ON' if on else 'OFF'}\n")
-
-    def cmd_burnproof(self, *args):
-        if not args or args[0].upper() not in ("ON", "OFF"):
-            print("Usage: BURN-PROOF ON|OFF")
+            
+        # Enforce optical media only
+        if self.disk.spec["family"] not in ("optical", "audio-cd"):
+            print("?LITESCRIBE is only available for optical media (CD/DVD/BD)")
             return
-        self.burn_proof = args[0].upper() == "ON"
-        if self.burn_proof:
-            self.justlink = False
-        print(f"Burn-Proof: {'ON' if self.burn_proof else 'OFF'}\n")
-
-    def cmd_justlink(self, *args):
-        if not args or args[0].upper() not in ("ON", "OFF"):
-            print("Usage: JUSTLINK ON|OFF")
+            
+        if not args:
+            print("Usage: LITESCRIBE <input_image_path>")
             return
-        self.justlink = args[0].upper() == "ON"
-        if self.justlink:
-            self.burn_proof = False
-        print(f"JustLink: {'ON' if self.justlink else 'OFF'}\n")
         
-    def cmd_overburn(self, *args):
-        if not args or args[0].upper() not in ("ON", "OFF"):
-            print("Usage: OVERBURN ON|OFF")
+        if not self.check_hardware_feature("litescribe"):
             return
-        self.overburn = args[0].upper() == "ON"
-        print(f"Overburn (+5% optical capacity): {'ON' if self.overburn else 'OFF'}\n")
+            
+        if not HAS_PIL:
+            print("?Pillow library is required for LightScribe. Install it via: pip install Pillow")
+            return
+
+        input_path = os.path.expanduser(args[0])
+        if not os.path.exists(input_path):
+            print(f"?IMAGE NOT FOUND: {input_path}")
+            return
+
+        # Output the label right next to the virtual disc file
+        base_name, _ = os.path.splitext(self.disk.path)
+        output_path = f"{base_name}_label.png"
+
+        try:
+            print("Warming up LightScribe laser...", end="", flush=True)
+            for _ in range(3):
+                time.sleep(0.4)
+                print(".", end="", flush=True)
+            print("\nEtching disc label... (this takes a moment)")
+            
+            # 1. Open, standardize resolution, and square the image
+            TARGET_SIZE = 600
+            img = Image.open(input_path).convert("L")
+            img = ImageOps.fit(img, (TARGET_SIZE, TARGET_SIZE), method=Image.Resampling.LANCZOS)
+            
+            # 2. Reduce the harsh contrast for a softer, muddier burn
+            enhancer = ImageEnhance.Contrast(img)
+            img = enhancer.enhance(0.45)
+            
+            # 3. Apply LightScribe Palette
+            lightscribe_gold = "#d4b982" 
+            laser_burn_brown = "#3a2b1d"
+            ls_image = ImageOps.colorize(img, black=laser_burn_brown, white=lightscribe_gold)
+            
+            # 4. Simulate Concentric Laser Grooves and Restrict Speed
+            draw = ImageDraw.Draw(ls_image, "RGBA")
+            center = (TARGET_SIZE // 2, TARGET_SIZE // 2)
+            outer_radius = TARGET_SIZE // 2
+            
+            # Real CD hole is 15mm on a 120mm disc (12.5% of diameter, or ~38px)
+            inner_radius = int(TARGET_SIZE * 0.0625) 
+            
+            tracks = list(range(inner_radius, outer_radius, 1))
+            total_tracks = len(tracks)
+            
+            print("\nCalibrating radial laser position...")
+            self.progress_start()
+            
+            # Automatically calculate sleep to maintain exactly ~7 mins total (420 seconds)
+            sleep_time = 420.0 / total_tracks if total_tracks else 0
+            
+            for i, r in enumerate(tracks, 1):
+                # Draw faint, semi-transparent tracks
+                draw.ellipse(
+                    (center[0]-r, center[1]-r, center[0]+r, center[1]+r), 
+                    outline=(0, 0, 0, 15)
+                )
+                time.sleep(sleep_time)
+                self.progress(i, total_tracks, "ETCHING")
+            
+            # 5. Mask the image into a physical disc shape
+            mask = Image.new("L", (TARGET_SIZE, TARGET_SIZE), 0)
+            mask_draw = ImageDraw.Draw(mask)
+            mask_draw.ellipse((0, 0, TARGET_SIZE, TARGET_SIZE), fill=255) # Outer edge
+            mask_draw.ellipse(
+                (center[0]-inner_radius, center[1]-inner_radius, center[0]+inner_radius, center[1]+inner_radius), 
+                fill=0 # Cut out the inner hole
+            )
+            
+            # 6. Composite the basic disc shape
+            final_image = Image.new("RGBA", (TARGET_SIZE, TARGET_SIZE), (0,0,0,0))
+            final_image.paste(ls_image, (0,0), mask)
+            
+            # 7. Render Authentic Hub Rings & Manufacturer Matrix
+            hub_draw = ImageDraw.Draw(final_image, "RGBA")
+            
+            # Properly scale the clear stacking ring to 35mm physical equivalent
+            stack_r = int(TARGET_SIZE * 0.145)
+            hub_draw.ellipse(
+                (center[0]-stack_r, center[1]-stack_r, center[0]+stack_r, center[1]+stack_r),
+                fill=None, outline=(220, 220, 220, 90), width=4
+            )
+            
+            # Create a thick, reflective silver matrix band (not dark brown!)
+            matrix_r = int(TARGET_SIZE * 0.19)
+            hub_draw.ellipse(
+                (center[0]-matrix_r, center[1]-matrix_r, center[0]+matrix_r, center[1]+matrix_r),
+                fill=None, outline=(170, 170, 170, 140), width=24
+            )
+            
+            # Stamp the dark text perfectly centered over the silver matrix band
+            try:
+                font = ImageFont.load_default()
+            except Exception:
+                font = None
+            
+            if font:
+                label_text = self.disk.spec.get("label", "OPTICAL MEDIA").upper()
+                matrix_text = f"IFPI L{random.randint(100,999)} - {label_text}"
+                
+                # Top text math
+                bbox = hub_draw.textbbox((0,0), matrix_text, font=font)
+                tw = bbox[2] - bbox[0]
+                th = bbox[3] - bbox[1]
+                hub_draw.text(
+                    (center[0] - tw//2, center[1] - matrix_r - th//2 - 2), 
+                    matrix_text, fill=(30, 25, 20, 230), font=font
+                )
+                
+                # Bottom text math
+                bbox2 = hub_draw.textbbox((0,0), "MADE IN JAPAN", font=font)
+                tw2 = bbox2[2] - bbox2[0]
+                th2 = bbox2[3] - bbox2[1]
+                hub_draw.text(
+                    (center[0] - tw2//2, center[1] + matrix_r - th2//2 - 2), 
+                    "MADE IN JAPAN", fill=(30, 25, 20, 230), font=font
+                )
+            
+            final_image.save(output_path)
+            print(f"\n✓ LightScribe label successfully etched to: {output_path}\n")
+
+        except Exception as e:
+            print(f"\n?LITESCRIBE FAILED: {e}")
 
     def cmd_hostls(self, *args):
         path = args[0] if args else "."
@@ -1876,7 +2261,7 @@ EXAMPLES:
     def run(self):
         print("""
 ╔══════════════════════════════════════════════════════╗
-║            RETROMEDIA - VIRTUAL MEDIA                ║
+║        RETROMEDIA ULTIMATE - VIRTUAL MEDIA           ║
 ║  Data Disks • Audio CDs (CD-DA) • Fixed Drives Rig   ║
 ╚══════════════════════════════════════════════════════╝
 Type HELP for commands, MEDIA for media types.
@@ -1893,14 +2278,17 @@ Type HELP for commands, MEDIA for media types.
             "COPY": self.cmd_copy, "WRITE": self.cmd_copy,
             "ADD": self.cmd_add_track, "BURN": self.cmd_add_track,
             "PLAY": self.play, "EXTRACT": self.cmd_extract,
+            "CLONE": self.cmd_clone, "RIP": self.cmd_rip,
             "DELETE": self.cmd_delete, "RM": self.cmd_delete,
             "FORMAT": self.cmd_format, "FINALIZE": self.cmd_finalize,
-            "CLOSE": self.cmd_finalize, "PROTECT": self.cmd_protect,
+            "CLOSE": self.cmd_finalize, "PROTECTION": self.cmd_protection,
+            "LITESCRIBE": self.cmd_litescribe, "PIRATE": self.cmd_pirate,
             "ARTIST": self.cmd_artist, "ALBUM": self.cmd_album,
             "BURN-PROOF": self.cmd_burnproof, "JUSTLINK": self.cmd_justlink,
             "OVERBURN": self.cmd_overburn,
             "ATTACH": self.cmd_attach, "DETACH": self.cmd_detach,
             "USE": self.cmd_use, "DRIVES": self.cmd_drives,
+            "HARDWARE": self.cmd_hardware,
             "XFER": self.cmd_xfer, "XMOVE": self.cmd_xmove,
             "HOSTLS": self.cmd_hostls, "CD": self.cmd_cd, "PWD": self.cmd_pwd,
         }
@@ -1941,7 +2329,7 @@ Type HELP for commands, MEDIA for media types.
 
 
 def main():
-    parser = argparse.ArgumentParser(description="RetroMedia - virtual media and Audio CD emulator")
+    parser = argparse.ArgumentParser(description="RetroMedia Ultimate - virtual media and Audio CD emulator")
     parser.add_argument("disk", nargs="?", help="Medium file to auto-load")
     args = parser.parse_args()
 
