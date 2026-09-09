@@ -354,7 +354,7 @@ DRIVE_MODELS = {
         "family": "floppy", "read": 63_488, "write": 56_320, 
         "label": "TEAC FD-235HF 3.5\" Floppy Drive", "features": []
     },
-    "IBM-PS2-Model-30": {
+    "IBM-PS2-MODEL-30": {
         "family": "floppy", "read": 63_488, "write": 56_320, 
         "label": "IBM PS2 Model 30 3.5\" Floppy Drive", "features": []
     },
