@@ -1997,10 +1997,10 @@ HOST COMMANDS:
 
     def cmd_cpus(self, *args):
         print("\n───── HISTORICAL CPU RIGS ─────")
-        print(f"{'CPU ID':<20}{'YEAR':>6}{'CLOCK':>11}{'SOCKET':<20}{'RAM':>10}  DESCRIPTION")
+        print(f"{'CPU ID':<20}{'YEAR':>6}{'CLOCK':>11}{' SOCKET':<20}{'RAM':>10}  DESCRIPTION")
         print("-" * 112)
         for cpu_id, c in CPU_RIGS.items():
-            print(f"{cpu_id:<20}{c['year']:>6}{str(c['clock_mhz'])+'MHz':>11}{'/'.join(c['socket']):<20}{str(c['ram_max'])+'MB':>10}  {c['label']}")
+            print(f"{cpu_id:<20}{c['year']:>6}{str(c['clock_mhz'])+'MHz':>11} {'/'.join(c['socket']):<20}{str(c['ram_max'])+'MB':>10}  {c['label']}")
         print("\nAttach with: ATTACHCPU <CPU_ID>\n")
 
     def cmd_attachcpu(self, *args):
