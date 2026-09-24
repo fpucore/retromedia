@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-RetroMedia - Virtual removable & fixed media emulator
+RetroMedia - Virtual removable & fixed media and hardware simulator
 
 Copyright (c) 2026 Chris McGimpsey-Jones
 Released under the MIT License
@@ -332,6 +332,301 @@ MEDIA_SPECS = {
         "family": "nvme", "recordable": True, "rewritable": True, "theatrics": False, "type": "data",
     },
 }
+
+
+# ====
+# GPU Rig specifications & simulation model
+# ====
+# These are historical hardware profiles used by RetroMedia's *simulation* layer.
+# The performance coefficients are deliberately normalized so GPUBENCH can model
+# period-appropriate constraints without pretending to be a real hardware benchmark.
+GPU_RIGS = {
+    "VOODOO1": {
+        "label": "3dfx Voodoo Graphics 4MB",
+        "year": 1996, "vram": 4, "bus": "PCI",
+        "api": ("Glide",), "fillrate": 90, "texture_rate": 90, "bandwidth": 0.8,
+        "max_resolution": (800, 600), "max_color_depth": 16,
+        "features": ("3d", "glide", "add-in-3d"), "perf_index": 38,
+    },
+    "VOODOO2": {
+        "label": "3dfx Voodoo2 12MB",
+        "year": 1998, "vram": 12, "bus": "PCI",
+        "api": ("Glide", "OpenGL"), "fillrate": 180, "texture_rate": 180, "bandwidth": 1.9,
+        "max_resolution": (1024, 768), "max_color_depth": 16,
+        "features": ("3d", "glide", "opengl", "sli"), "perf_index": 72,
+    },
+    "VOODOO3-2000": {
+        "label": "3dfx Voodoo3 2000 16MB",
+        "year": 1999, "vram": 16, "bus": "AGP/PCI",
+        "api": ("Glide", "OpenGL", "Direct3D"), "fillrate": 286, "texture_rate": 286, "bandwidth": 5.5,
+        "max_resolution": (2048, 1536), "max_color_depth": 16,
+        "features": ("2d", "3d", "glide", "opengl", "d3d"), "perf_index": 108,
+    },
+    "VOODOO3-3000": {
+        "label": "3dfx Voodoo3 3000 16MB",
+        "year": 1999, "vram": 16, "bus": "AGP/PCI",
+        "api": ("Glide", "OpenGL", "Direct3D"), "fillrate": 333, "texture_rate": 333, "bandwidth": 5.3,
+        "max_resolution": (2048, 1536), "max_color_depth": 16,
+        "features": ("2d", "3d", "glide", "opengl", "d3d"), "perf_index": 126,
+    },
+    "VOODOO5-5500": {
+        "label": "3dfx Voodoo5 5500 64MB",
+        "year": 2000, "vram": 64, "bus": "AGP/PCI",
+        "api": ("Glide", "OpenGL", "Direct3D"), "fillrate": 667, "texture_rate": 667, "bandwidth": 7.5,
+        "max_resolution": (2048, 1536), "max_color_depth": 32,
+        "features": ("2d", "3d", "glide", "opengl", "d3d", "fsaa", "dual-gpu"), "perf_index": 178,
+    },
+    "RIVA128": {
+        "label": "NVIDIA RIVA 128 4MB",
+        "year": 1997, "vram": 4, "bus": "PCI/AGP",
+        "api": ("OpenGL", "Direct3D"), "fillrate": 100, "texture_rate": 100, "bandwidth": 1.6,
+        "max_resolution": (1600, 1200), "max_color_depth": 32,
+        "features": ("2d", "3d", "opengl", "d3d", "32bit"), "perf_index": 42,
+    },
+    "TNT2-ULTRA": {
+        "label": "NVIDIA RIVA TNT2 Ultra 32MB",
+        "year": 1999, "vram": 32, "bus": "AGP",
+        "api": ("OpenGL", "Direct3D"), "fillrate": 300, "texture_rate": 300, "bandwidth": 3.2,
+        "max_resolution": (2048, 1536), "max_color_depth": 32,
+        "features": ("2d", "3d", "opengl", "d3d", "32bit", "agp"), "perf_index": 118,
+    },
+    "GEFORCE256": {
+        "label": "NVIDIA GeForce 256 32MB DDR",
+        "year": 1999, "vram": 32, "bus": "AGP",
+        "api": ("OpenGL", "Direct3D"), "fillrate": 480, "texture_rate": 480, "bandwidth": 4.8,
+        "max_resolution": (2048, 1536), "max_color_depth": 32,
+        "features": ("2d", "3d", "opengl", "d3d", "32bit", "hardware-tl", "agp"), "perf_index": 162,
+    },
+    "GEFORCE2-GTS": {
+        "label": "NVIDIA GeForce2 GTS 32MB",
+        "year": 2000, "vram": 32, "bus": "AGP",
+        "api": ("OpenGL", "Direct3D"), "fillrate": 800, "texture_rate": 1600, "bandwidth": 5.3,
+        "max_resolution": (2048, 1536), "max_color_depth": 32,
+        "features": ("2d", "3d", "opengl", "d3d", "32bit", "hardware-tl", "agp"), "perf_index": 235,
+    },
+    "ATI-RAGE128PRO": {
+        "label": "ATI Rage 128 Pro 32MB",
+        "year": 1999, "vram": 32, "bus": "AGP/PCI",
+        "api": ("OpenGL", "Direct3D"), "fillrate": 250, "texture_rate": 250, "bandwidth": 3.2,
+        "max_resolution": (2048, 1536), "max_color_depth": 32,
+        "features": ("2d", "3d", "opengl", "d3d", "32bit", "agp"), "perf_index": 100,
+    },
+    "MATROX-G400MAX": {
+        "label": "Matrox Millennium G400 MAX 32MB",
+        "year": 1999, "vram": 32, "bus": "AGP",
+        "api": ("OpenGL", "Direct3D"), "fillrate": 360, "texture_rate": 720, "bandwidth": 4.6,
+        "max_resolution": (2048, 1536), "max_color_depth": 32,
+        "features": ("2d", "3d", "opengl", "d3d", "32bit", "agp", "dual-head"), "perf_index": 132,
+    },
+    "S3-SAVAGE4": {
+        "label": "S3 Savage4 Pro 32MB",
+        "year": 1999, "vram": 32, "bus": "AGP/PCI",
+        "api": ("OpenGL", "Direct3D"), "fillrate": 250, "texture_rate": 500, "bandwidth": 2.9,
+        "max_resolution": (2048, 1536), "max_color_depth": 32,
+        "features": ("2d", "3d", "opengl", "d3d", "32bit", "agp", "s3tc"), "perf_index": 91,
+    },
+    "RADEON-256": {
+        "label": "ATI Radeon DDR 64MB",
+        "year": 2000, "vram": 64, "bus": "AGP",
+        "api": ("OpenGL", "Direct3D"), "fillrate": 480, "texture_rate": 960, "bandwidth": 5.5,
+        "max_resolution": (2048, 1536), "max_color_depth": 32,
+        "features": ("2d", "3d", "opengl", "d3d", "32bit", "hardware-tl", "agp", "hyper-z"), "perf_index": 205,
+    },
+    "RADEON-7500": {
+        "label": "ATI Radeon 7500 64MB",
+        "year": 2001, "vram": 64, "bus": "AGP/PCI",
+        "api": ("OpenGL", "Direct3D"), "fillrate": 600, "texture_rate": 1200, "bandwidth": 5.8,
+        "max_resolution": (2048, 1536), "max_color_depth": 32,
+        "features": ("2d", "3d", "opengl", "d3d", "32bit", "agp", "hyper-z"), "perf_index": 250,
+    },
+}
+
+CPU_RIGS = {
+    "PENTIUM-133": {"label": "Intel Pentium 133", "vendor": "Intel", "year": 1995, "family": "P5", "socket": ("Socket 7",), "clock_mhz": 133, "cores": 1, "threads": 1, "fsb_mhz": 66, "cache_kb": 256, "isa": ("x86", "MMX"), "score": 24, "ram_max": 128, "memory": ("FPM", "EDO", "SDRAM"), "bus": "PCI/ISA"},
+    "PENTIUM-MMX-233": {"label": "Intel Pentium MMX 233", "vendor": "Intel", "year": 1997, "family": "P5", "socket": ("Socket 7",), "clock_mhz": 233, "cores": 1, "threads": 1, "fsb_mhz": 66, "cache_kb": 512, "isa": ("x86", "MMX"), "score": 42, "ram_max": 256, "memory": ("EDO", "SDRAM"), "bus": "PCI/ISA"},
+    "PENTIUM-II-450": {"label": "Intel Pentium II 450", "vendor": "Intel", "year": 1999, "family": "P6", "socket": ("Slot 1",), "clock_mhz": 450, "cores": 1, "threads": 1, "fsb_mhz": 100, "cache_kb": 512, "isa": ("x86", "MMX", "SSE"), "score": 82, "ram_max": 512, "memory": ("SDRAM",), "bus": "PCI/AGP/ISA"},
+    "PENTIUM-III-600": {"label": "Intel Pentium III 600", "vendor": "Intel", "year": 1999, "family": "P6", "socket": ("Slot 1", "Socket 370"), "clock_mhz": 600, "cores": 1, "threads": 1, "fsb_mhz": 100, "cache_kb": 256, "isa": ("x86", "MMX", "SSE"), "score": 105, "ram_max": 1024, "memory": ("SDRAM",), "bus": "PCI/AGP/ISA"},
+    "PENTIUM-III-1000": {"label": "Intel Pentium III 1GHz", "vendor": "Intel", "year": 2000, "family": "P6", "socket": ("Socket 370",), "clock_mhz": 1000, "cores": 1, "threads": 1, "fsb_mhz": 133, "cache_kb": 256, "isa": ("x86", "MMX", "SSE"), "score": 135, "ram_max": 1024, "memory": ("SDRAM",), "bus": "PCI/AGP"},
+    "PENTIUM-4-1500": {"label": "Intel Pentium 4 1.5GHz", "vendor": "Intel", "year": 2000, "family": "NetBurst", "socket": ("Socket 423",), "clock_mhz": 1500, "cores": 1, "threads": 1, "fsb_mhz": 100, "cache_kb": 256, "isa": ("x86", "MMX", "SSE", "SSE2"), "score": 150, "ram_max": 2048, "memory": ("RDRAM",), "bus": "PCI/AGP"},
+    "ATHLON-1000": {"label": "AMD Athlon 1GHz", "vendor": "AMD", "year": 2000, "family": "K7", "socket": ("Socket A",), "clock_mhz": 1000, "cores": 1, "threads": 1, "fsb_mhz": 266, "cache_kb": 384, "isa": ("x86", "MMX", "3DNow!", "Enhanced 3DNow!"), "score": 145, "ram_max": 1536, "memory": ("SDRAM",), "bus": "PCI/AGP"},
+    "DURON-800": {"label": "AMD Duron 800", "vendor": "AMD", "year": 2000, "family": "K7", "socket": ("Socket A",), "clock_mhz": 800, "cores": 1, "threads": 1, "fsb_mhz": 200, "cache_kb": 192, "isa": ("x86", "MMX", "3DNow!", "Enhanced 3DNow!"), "score": 110, "ram_max": 1536, "memory": ("SDRAM",), "bus": "PCI/AGP"},
+    "ATHLON-XP-1800": {"label": "AMD Athlon XP 1800+", "vendor": "AMD", "year": 2001, "family": "K7", "socket": ("Socket A",), "clock_mhz": 1533, "cores": 1, "threads": 1, "fsb_mhz": 266, "cache_kb": 384, "isa": ("x86", "MMX", "3DNow!", "SSE"), "score": 210, "ram_max": 3072, "memory": ("DDR",), "bus": "PCI/AGP"},
+    "CYRIX-MII-300": {"label": "Cyrix MII 300", "vendor": "Cyrix", "year": 1998, "family": "6x86", "socket": ("Socket 7",), "clock_mhz": 233, "cores": 1, "threads": 1, "fsb_mhz": 66, "cache_kb": 256, "isa": ("x86", "MMX"), "score": 32, "ram_max": 256, "memory": ("EDO", "SDRAM"), "bus": "PCI/ISA"},
+    "VIA-C3-800": {"label": "VIA C3 800", "vendor": "VIA", "year": 2001, "family": "C3", "socket": ("Socket 370",), "clock_mhz": 800, "cores": 1, "threads": 1, "fsb_mhz": 133, "cache_kb": 192, "isa": ("x86", "MMX", "3DNow!", "SSE"), "score": 88, "ram_max": 1024, "memory": ("SDRAM", "DDR"), "bus": "PCI/AGP"},
+    "GENERIC": {"label": "Unconstrained Host CPU", "vendor": "Generic", "year": 2000, "family": "Generic", "socket": ("ANY",), "clock_mhz": 10000, "cores": 8, "threads": 16, "fsb_mhz": 1000, "cache_kb": 16384, "isa": ("x86", "MMX", "SSE", "SSE2", "SSE3"), "score": 1000, "ram_max": 1 << 20, "memory": ("ANY",), "bus": "PCI/AGP/PCIe/ISA"},
+}
+
+# Backwards-compatible name used by the original GPU rig implementation.
+GPU_CPU_RIGS = CPU_RIGS
+
+MOTHERBOARD_RIGS = {
+    "INTEL-430FX": {"label": "Intel 430FX Triton", "vendor": "Intel", "year": 1995, "socket": ("Socket 5", "Socket 7"), "fsb_mhz": (50, 60, 66), "ram_type": ("FPM", "EDO"), "max_ram_mb": 128, "isa": True, "pci": True, "agp": False, "agp_version": 0.0, "agp_modes": (), "ide": True, "max_ide_devices": 4, "buses": ("ISA", "PCI"), "chipset": "430FX"},
+    "INTEL-430TX": {"label": "Intel 430TX Triton II", "vendor": "Intel", "year": 1996, "socket": ("Socket 7",), "fsb_mhz": (66, 75, 83), "ram_type": ("EDO", "SDRAM"), "max_ram_mb": 256, "isa": True, "pci": True, "agp": False, "agp_version": 0.0, "agp_modes": (), "ide": True, "max_ide_devices": 4, "buses": ("ISA", "PCI"), "chipset": "430TX"},
+    "INTEL-440BX": {"label": "Intel 440BX", "vendor": "Intel", "year": 1998, "socket": ("Slot 1", "Socket 370"), "fsb_mhz": (66, 100, 133), "ram_type": ("SDRAM",), "max_ram_mb": 1024, "isa": True, "pci": True, "agp": True, "agp_version": 1.0, "agp_modes": (1, 2), "ide": True, "max_ide_devices": 4, "buses": ("ISA", "PCI", "AGP"), "chipset": "440BX"},
+    "INTEL-815": {"label": "Intel 815E", "vendor": "Intel", "year": 2000, "socket": ("Socket 370",), "fsb_mhz": (66, 100, 133), "ram_type": ("SDRAM",), "max_ram_mb": 512, "isa": False, "pci": True, "agp": True, "agp_version": 2.0, "agp_modes": (1, 2, 4), "ide": True, "max_ide_devices": 4, "buses": ("PCI", "AGP"), "chipset": "815E"},
+    "INTEL-850": {"label": "Intel 850", "vendor": "Intel", "year": 2000, "socket": ("Socket 423",), "fsb_mhz": (100, 133), "ram_type": ("RDRAM",), "max_ram_mb": 2048, "isa": False, "pci": True, "agp": True, "agp_version": 4.0, "agp_modes": (4,), "ide": True, "max_ide_devices": 4, "buses": ("PCI", "AGP"), "chipset": "850"},
+    "AMD-751": {"label": "AMD 751 / Irongate", "vendor": "AMD", "year": 1999, "socket": ("Slot A", "Socket A"), "fsb_mhz": (100, 200, 266), "ram_type": ("SDRAM",), "max_ram_mb": 768, "isa": True, "pci": True, "agp": True, "agp_version": 2.0, "agp_modes": (1, 2), "ide": True, "max_ide_devices": 4, "buses": ("ISA", "PCI", "AGP"), "chipset": "AMD-751"},
+    "VIA-KT133": {"label": "VIA KT133", "vendor": "VIA", "year": 2000, "socket": ("Socket A",), "fsb_mhz": (200, 266), "ram_type": ("SDRAM",), "max_ram_mb": 1536, "isa": True, "pci": True, "agp": True, "agp_version": 4.0, "agp_modes": (1, 2, 4), "ide": True, "max_ide_devices": 4, "buses": ("ISA", "PCI", "AGP"), "chipset": "KT133"},
+    "SIS-735": {"label": "SiS 735", "vendor": "SiS", "year": 2001, "socket": ("Socket A",), "fsb_mhz": (200, 266), "ram_type": ("DDR",), "max_ram_mb": 3072, "isa": True, "pci": True, "agp": True, "agp_version": 4.0, "agp_modes": (1, 2, 4), "ide": True, "max_ide_devices": 4, "buses": ("ISA", "PCI", "AGP"), "chipset": "SiS 735"},
+    "INTEL-850E": {"label": "Intel 850E", "vendor": "Intel", "year": 2002, "socket": ("Socket 478",), "fsb_mhz": (100, 133), "ram_type": ("RDRAM",), "max_ram_mb": 2048, "isa": False, "pci": True, "agp": True, "agp_version": 4.0, "agp_modes": (4,), "ide": True, "max_ide_devices": 4, "buses": ("PCI", "AGP"), "chipset": "850E"},
+}
+
+
+def _cpu_mb_compatible(cpu: dict, mb: dict) -> Tuple[bool, str]:
+    if "ANY" in mb["socket"] or "ANY" in cpu["socket"]:
+        return True, ""
+    if not set(cpu["socket"]).intersection(mb["socket"]):
+        return False, f"CPU socket {', '.join(cpu['socket'])} is not supported by {mb['chipset']}"
+    if cpu["fsb_mhz"] not in mb["fsb_mhz"]:
+        return False, f"CPU FSB {cpu['fsb_mhz']}MHz is not listed by {mb['chipset']}"
+    return True, ""
+
+
+def _mb_bus_supported(mb: Optional[dict], bus: str) -> bool:
+    if not mb or bus.upper() == "AUTO":
+        return True
+    return bus.upper() in tuple(x.upper() for x in mb.get("buses", ()))
+
+
+def _cpu_work_score(cpu: dict, workload: int = 50) -> dict:
+    workload = max(1, min(100, int(workload)))
+    # Synthetic model: normalized work units, not a historical benchmark.
+    throughput = cpu["score"] * (1.0 + workload / 220.0)
+    time_units = 1000.0 / max(1.0, throughput)
+    return {"throughput": throughput, "time_units": time_units}
+
+
+def _gpu_workload_score(width: int, height: int, color_depth: int, geometry: int, textures: int, effects: int) -> float:
+    pixels = max(1, width * height)
+    pixel_factor = pixels / float(640 * 480)
+    color_factor = 1.0 if color_depth <= 16 else 1.28
+    return 38.0 * pixel_factor * color_factor + 0.22 * geometry + 0.22 * textures + 0.18 * effects
+
+
+def _gpu_system_factor(gpu: dict, cpu: dict, ram_mb: int, bus: str, motherboard: Optional[dict] = None) -> Tuple[float, List[str]]:
+    limits = []
+    cpu_factor = min(1.0, cpu["score"] / max(1.0, gpu["perf_index"] * 0.72))
+    if cpu_factor < 0.999:
+        limits.append("CPU")
+    ram_need = 16 + gpu["vram"] * 0.20
+    ram_factor = min(1.0, ram_mb / max(1.0, ram_need))
+    if ram_factor < 0.999:
+        limits.append("RAM")
+
+    effective_bus = bus.upper()
+    if motherboard and effective_bus == "AUTO":
+        if "AGP" in gpu["bus"].upper() and motherboard.get("agp"):
+            effective_bus = "AGP"
+        elif "PCI" in gpu["bus"].upper() and motherboard.get("pci"):
+            effective_bus = "PCI"
+        else:
+            effective_bus = "AUTO"
+
+    bus_ok = effective_bus == "AUTO" or (effective_bus in gpu["bus"].upper()) or (gpu["bus"] == "AGP/PCI" and effective_bus in ("AGP", "PCI"))
+    if motherboard and effective_bus != "AUTO" and not _mb_bus_supported(motherboard, effective_bus):
+        bus_ok = False
+    bus_factor = 1.0 if bus_ok else 0.78
+    if bus_factor < 1.0:
+        limits.append("BUS")
+
+    if motherboard:
+        if ram_mb > motherboard["max_ram_mb"]:
+            ram_factor = min(ram_factor, motherboard["max_ram_mb"] / float(ram_mb))
+            if "MOTHERBOARD-RAM" not in limits:
+                limits.append("MOTHERBOARD-RAM")
+
+    return min(cpu_factor, ram_factor, bus_factor), limits
+
+
+class GPURig:
+    def __init__(self, model_id: str):
+        model_id = model_id.upper()
+        if model_id not in GPU_RIGS:
+            raise MediaError(f"Unknown GPU rig: {model_id}")
+        self.model_id = model_id
+        self.spec = GPU_RIGS[model_id]
+        self.sli_count = 1
+        self.cpu_id = "GENERIC"
+        self.mb_id = ""
+        self.ram_mb = 512
+        self.bus = "AUTO"
+
+    def configure_host(self, cpu_id: str = "GENERIC", ram_mb: int = 512, bus: str = "AUTO", mb_id: str = ""):
+        cpu_id = cpu_id.upper()
+        mb_id = mb_id.upper() if mb_id else ""
+        if cpu_id not in CPU_RIGS:
+            raise MediaError(f"Unknown CPU rig: {cpu_id}")
+        if mb_id and mb_id not in MOTHERBOARD_RIGS:
+            raise MediaError(f"Unknown motherboard rig: {mb_id}")
+        if ram_mb < 16:
+            raise MediaError("GPU host RAM must be at least 16MB")
+        if mb_id:
+            ok, reason = _cpu_mb_compatible(CPU_RIGS[cpu_id], MOTHERBOARD_RIGS[mb_id])
+            if not ok:
+                raise MediaError(reason)
+            if ram_mb > MOTHERBOARD_RIGS[mb_id]["max_ram_mb"]:
+                raise MediaError(f"{mb_id} supports at most {MOTHERBOARD_RIGS[mb_id]['max_ram_mb']}MB RAM")
+        self.cpu_id, self.mb_id, self.ram_mb, self.bus = cpu_id, mb_id, ram_mb, bus.upper()
+
+    def attach_sli(self, count: int):
+        if count not in (1, 2):
+            raise MediaError("SLI count must be 1 or 2")
+        if count == 2 and "sli" not in self.spec["features"]:
+            raise MediaError(f"{self.model_id} does not support SLI")
+        self.sli_count = count
+
+    def caps(self) -> dict:
+        return self.spec
+
+    def system_check(self) -> List[str]:
+        issues = []
+        mb = MOTHERBOARD_RIGS.get(self.mb_id) if self.mb_id else None
+        cpu = CPU_RIGS[self.cpu_id]
+        if mb:
+            ok, reason = _cpu_mb_compatible(cpu, mb)
+            if not ok:
+                issues.append(reason)
+            if self.ram_mb > mb["max_ram_mb"]:
+                issues.append(f"RAM exceeds motherboard limit of {mb['max_ram_mb']}MB")
+            if self.bus != "AUTO" and not _mb_bus_supported(mb, self.bus):
+                issues.append(f"motherboard does not expose {self.bus} bus")
+        if self.bus != "AUTO":
+            bus_ok = self.bus in self.spec["bus"].upper() or (self.spec["bus"] == "AGP/PCI" and self.bus in ("AGP", "PCI"))
+            if not bus_ok:
+                issues.append(f"GPU does not support {self.bus} attachment")
+        return issues
+
+    def estimate(self, width: int, height: int, color_depth: int = 16, geometry: int = 50, textures: int = 50, effects: int = 25) -> dict:
+        if width < 1 or height < 1:
+            raise MediaError("Resolution must be positive")
+        if color_depth not in (16, 32):
+            raise MediaError("Color depth must be 16 or 32 bits")
+        if color_depth > self.spec["max_color_depth"]:
+            return {"supported": False, "reason": f"{self.spec['label']} supports at most {self.spec['max_color_depth']}-bit color"}
+        if width > self.spec["max_resolution"][0] or height > self.spec["max_resolution"][1]:
+            return {"supported": False, "reason": f"resolution exceeds {self.spec['max_resolution'][0]}x{self.spec['max_resolution'][1]}"}
+
+        mb = MOTHERBOARD_RIGS.get(self.mb_id) if self.mb_id else None
+        system_factor, limits = _gpu_system_factor(GPU_RIGS[self.model_id], CPU_RIGS[self.cpu_id], self.ram_mb, self.bus, mb)
+        issues = self.system_check()
+        if issues:
+            return {"supported": False, "reason": "; ".join(issues), "limits": limits}
+        workload = _gpu_workload_score(width, height, color_depth, geometry, textures, effects)
+        gpu_power = self.spec["perf_index"] * (1.0 + 0.72 * (self.sli_count - 1))
+        fps = max(0.5, min(240.0, 60.0 * gpu_power / max(1.0, workload) * system_factor))
+        fill_limit = self.spec["fillrate"] * self.sli_count / max(1.0, width * height / 1_000_000.0)
+        if "hardware-tl" not in self.spec["features"]:
+            geometry_penalty = 1.0 + geometry / 280.0
+        else:
+            geometry_penalty = 1.0 + geometry / 430.0
+        fps /= geometry_penalty
+        if textures > 70:
+            fps *= min(1.0, self.spec["texture_rate"] / 250.0)
+        if effects > 75 and "fsaa" not in self.spec["features"]:
+            fps *= 0.84
+        fps = max(0.5, min(240.0, fps))
+        return {"supported": True, "fps": fps, "workload": workload, "system_factor": system_factor, "limits": limits, "fill_mpix": fill_limit, "vram_ok": self.ram_mb >= 16}
+
 
 # ====
 # Hardware Drive Specifications & Features
@@ -975,6 +1270,10 @@ class Shell:
         self.overburn = False
         self.pirate_mode = False
         self.host_rate: Optional[int] = None
+        self.gpu: Optional[GPURig] = None
+        self.cpu_id: str = "GENERIC"
+        self.motherboard_id: str = ""
+        self.system_ram_mb: int = 512
         self._audio_proc = None
         self._block_lines = 0
         
@@ -1332,6 +1631,19 @@ AUDIO CD COMMANDS:
   ARTIST <name>                                    Set disc artist
   ALBUM <title>                                    Set disc album title
 
+SYSTEM / HARDWARE RIG COMMANDS:
+  ATTACHCPU <CPU_ID>                               Attach a historical CPU profile
+  DETACHCPU                                        Remove the CPU profile
+  CPU / CPUINFO                                    Show attached CPU profile
+  CPUS                                             List historical CPU profiles
+  CPUBENCH [LOAD]                                  Synthetic CPU workload model (0-100)
+  ATTACHMB <MODEL_ID>                              Attach a historical motherboard profile
+  DETACHMB                                         Remove the motherboard profile
+  MB / MBINFO                                      Show attached motherboard
+  MOTHERBOARDS                                     List historical motherboard profiles
+  CHECKSYSTEM                                      Validate CPU / motherboard / GPU compatibility
+  BENCH [WxH] [BPP] [GEOM] [TEX] [FX]              System GPU benchmark using attached platform
+
 DRIVE RIG COMMANDS:
   ATTACH <slot> <file> [MODEL_ID]                  Load a drive into the rig (e.g. TEAC-FD235HF)
   DETACH <slot>                                    Remove a drive from the rig
@@ -1340,6 +1652,16 @@ DRIVE RIG COMMANDS:
   USE <slot>                                       Switch active drive
   XFER <slot>:<file> <slot>:<file>                 Copy file between drives
   XMOVE <slot>:<file> <slot>:<file>                Move file between drives
+
+GPU RIG COMMANDS:
+  ATTACHGPU <MODEL_ID> [SLI_COUNT]                 Attach a historical GPU rig
+  DETACHGPU                                        Remove the GPU rig
+  GPU / GPUINFO                                    Show attached GPU
+  GPUS                                             List historical GPU models
+  GPUCAPS                                          Show GPU API/feature capabilities
+  GPUHOST <CPU_ID> <RAM_MB> [BUS]                  Configure host bottlenecks
+  GPUCPUS                                          List host CPU profiles
+  GPUBENCH [WxH] [BPP] [GEOM] [TEX] [FX]           Run synthetic GPU performance model
 
 HOST COMMANDS:
   HOSTLS [path]                                    List host directory files
@@ -1484,6 +1806,356 @@ HOST COMMANDS:
                 print(f"  Hardware:        {d.hardware_spec['label']} [{hw_id}]\n")
         except Exception as e:
             print(f"?ATTACH FAILED: {e}")
+
+    def cmd_gpu(self, *args):
+        if not self.gpu:
+            print("\nGPU RIG: NONE ATTACHED")
+            print("Use: ATTACHGPU <MODEL_ID>")
+            print("Type GPUS for the historical GPU catalogue.\n")
+            return
+        g = self.gpu.spec
+        print("\n───── GPU RIG ─────")
+        print(f"  Model:            {g['label']} [{self.gpu.model_id}]")
+        print(f"  Era:              {g['year']}")
+        print(f"  VRAM:             {g['vram']}MB")
+        print(f"  Bus:              {g['bus']}")
+        print(f"  API:              {', '.join(g['api'])}")
+        print(f"  SLI:              {'x'+str(self.gpu.sli_count) if self.gpu.sli_count > 1 else 'OFF'}")
+        print(f"  Host CPU:         {GPU_CPU_RIGS[self.gpu.cpu_id]['label']}")
+        print(f"  Host RAM:         {self.gpu.ram_mb}MB")
+        print(f"  Host bus:         {self.gpu.bus}")
+        print()
+
+    def cmd_gpus(self, *args):
+        print("\n───── HISTORICAL GPU RIGS ─────")
+        print(f"{'MODEL ID':<20}{'YEAR':>6}{'VRAM':>8}{'BUS':<14}{'PERF':>8}  DESCRIPTION")
+        print("-" * 90)
+        for model_id, spec in GPU_RIGS.items():
+            print(f"{model_id:<20}{spec['year']:>6}{str(spec['vram'])+'MB':>8}{spec['bus']:<14}{spec['perf_index']:>8.0f}  {spec['label']}")
+        print("\nAttach with: ATTACHGPU <MODEL_ID>")
+        print("Host profiles: GPUHOST <CPU_ID> <RAM_MB> [BUS] [MB_ID]\n")
+
+    def cmd_attachgpu(self, *args):
+        if not args:
+            print("Usage: ATTACHGPU <MODEL_ID> [SLI_COUNT]")
+            return
+        model_id = args[0].upper()
+        if model_id not in GPU_RIGS:
+            print(f"?UNKNOWN GPU: {model_id} (type GPUS for a list)")
+            return
+        try:
+            rig = GPURig(model_id)
+            if len(args) > 1:
+                rig.attach_sli(int(args[1]))
+            # Inherit the currently attached platform profile when one exists.
+            rig.configure_host(self.cpu_id, self.system_ram_mb, "AUTO", self.motherboard_id)
+            self.gpu = rig
+            print(f"\n✓ GPU ATTACHED: {rig.spec['label']} [{model_id}]")
+            print(f"  VRAM: {rig.spec['vram']}MB   Bus: {rig.spec['bus']}")
+            print(f"  APIs: {', '.join(rig.spec['api'])}")
+            if rig.sli_count > 1:
+                print(f"  SLI:  {rig.sli_count}-way")
+            print()
+        except (ValueError, MediaError) as e:
+            print(f"?ATTACHGPU FAILED: {e}")
+
+    def cmd_detachgpu(self, *args):
+        if not self.gpu:
+            print("?NO GPU ATTACHED")
+            return
+        print(f"✓ GPU DETACHED: {self.gpu.spec['label']} [{self.gpu.model_id}]")
+        self.gpu = None
+
+    def cmd_gpuinfo(self, *args):
+        if not self.gpu:
+            print("?NO GPU ATTACHED")
+            return
+        g = self.gpu.spec
+        print(f"\n{g['label']} [{self.gpu.model_id}]")
+        print(f"  Release year:     {g['year']}")
+        print(f"  VRAM:             {g['vram']}MB")
+        print(f"  Bus:              {g['bus']}")
+        print(f"  API:              {', '.join(g['api'])}")
+        print(f"  Pixel fill rate:  {g['fillrate']:.0f} MPixel/s")
+        print(f"  Texture rate:     {g['texture_rate']:.0f} MTexel/s")
+        print(f"  Memory bandwidth: {g['bandwidth']:.1f} GB/s")
+        print(f"  Max resolution:   {g['max_resolution'][0]}x{g['max_resolution'][1]}")
+        print(f"  Color depth:      {g['max_color_depth']}-bit")
+        print(f"  Features:         {', '.join(g['features'])}")
+        print(f"  Simulation index: {g['perf_index']:.0f}")
+        print(f"  Host CPU:         {CPU_RIGS[self.gpu.cpu_id]['label']}")
+        print(f"  Host RAM:         {self.gpu.ram_mb}MB")
+        print(f"  Motherboard:      {MOTHERBOARD_RIGS[self.gpu.mb_id]['label'] if self.gpu.mb_id else 'None'}")
+        print()
+
+    def cmd_gpucaps(self, *args):
+        if not self.gpu:
+            print("?NO GPU ATTACHED")
+            return
+        g = self.gpu.spec
+        print("\n───── GPU CAPABILITY CHECK ─────")
+        for api in g["api"]:
+            print(f"  {api:<14} ✓")
+        print(f"  {'16-bit color':<14} ✓")
+        print(f"  {'32-bit color':<14} {'✓' if g['max_color_depth'] >= 32 else '✗'}")
+        for feature in ("hardware-tl", "sli", "fsaa", "s3tc"):
+            print(f"  {feature:<14} {'✓' if feature in g['features'] else '✗'}")
+        print(f"  {'Max resolution':<14} {g['max_resolution'][0]}x{g['max_resolution'][1]}")
+        print()
+
+    def cmd_gpuhost(self, *args):
+        if not self.gpu:
+            print("?NO GPU ATTACHED")
+            return
+        if not args:
+            mb_label = MOTHERBOARD_RIGS[self.gpu.mb_id]['label'] if self.gpu.mb_id else 'None'
+            print(f"GPUHOST: {CPU_RIGS[self.gpu.cpu_id]['label']}, {self.gpu.ram_mb}MB RAM, bus {self.gpu.bus}, MB {mb_label}")
+            print("Usage: GPUHOST <CPU_ID> <RAM_MB> [BUS] [MB_ID]")
+            print("Type CPUS or MOTHERBOARDS for profiles.")
+            return
+        cpu_id = args[0].upper()
+        try:
+            ram = int(args[1]) if len(args) > 1 else self.gpu.ram_mb
+            bus = args[2] if len(args) > 2 else "AUTO"
+            mb_id = args[3].upper() if len(args) > 3 else self.gpu.mb_id
+            self.gpu.configure_host(cpu_id, ram, bus, mb_id)
+            self.cpu_id = cpu_id
+            self.system_ram_mb = ram
+            self.motherboard_id = mb_id
+            print(f"✓ GPU HOST: {CPU_RIGS[cpu_id]['label']} / {ram}MB / {bus.upper()} / {mb_id or 'NO-MB'}")
+        except (ValueError, MediaError) as e:
+            print(f"?GPUHOST FAILED: {e}")
+
+    def cmd_gpucpus(self, *args):
+        print("\n───── GPU HOST CPU PROFILES ─────")
+        print(f"{'CPU ID':<20}{'YEAR':>6}{'RAM MAX':>10}  DESCRIPTION")
+        print("-" * 72)
+        for cpu_id, spec in GPU_CPU_RIGS.items():
+            print(f"{cpu_id:<20}{spec['year']:>6}{str(spec['ram_max'])+'MB':>10}  {spec['label']}")
+        print()
+
+    def cmd_gpubench(self, *args):
+        if not self.gpu:
+            print("?NO GPU ATTACHED")
+            return
+        try:
+            width, height = 640, 480
+            color = 16
+            geometry, textures, effects = 50, 50, 25
+            if args:
+                if "x" in args[0].lower():
+                    width, height = (int(v) for v in args[0].lower().split("x", 1))
+                if len(args) > 1: color = int(args[1])
+                if len(args) > 2: geometry = max(0, min(100, int(args[2])))
+                if len(args) > 3: textures = max(0, min(100, int(args[3])))
+                if len(args) > 4: effects = max(0, min(100, int(args[4])))
+            result = self.gpu.estimate(width, height, color, geometry, textures, effects)
+            print("\n───── GPU RIG BENCH ─────")
+            print(f"  GPU:              {self.gpu.spec['label']}")
+            print(f"  Workload:         {width}x{height} / {color}-bit")
+            print(f"  Geometry:         {geometry}%")
+            print(f"  Texture load:     {textures}%")
+            print(f"  Effects load:     {effects}%")
+            if not result["supported"]:
+                print(f"  Result:           UNSUPPORTED — {result['reason']}\n")
+                return
+            print(f"  Estimated FPS:    {result['fps']:.1f}")
+            print(f"  System factor:    {result['system_factor']*100:.1f}%")
+            print(f"  Pixel envelope:   {result['fill_mpix']:.1f} MPixel/s")
+            print(f"  Bottlenecks:      {', '.join(result['limits']) if result['limits'] else 'GPU / workload'}")
+            print("  NOTE:             Synthetic RetroMedia model; not a real benchmark.")
+            print()
+        except (ValueError, MediaError) as e:
+            print(f"?GPUBENCH FAILED: {e}")
+
+    def cmd_cpu(self, *args):
+        if args:
+            cpu_id = args[0].upper()
+            if cpu_id not in CPU_RIGS:
+                print(f"?UNKNOWN CPU: {cpu_id} (type CPUS for a list)")
+                return
+            self.cpu_id = cpu_id
+        c = CPU_RIGS[self.cpu_id]
+        print(f"\n───── CPU RIG ─────")
+        print(f"  Model:            {c['label']} [{self.cpu_id}]")
+        print(f"  Vendor:           {c['vendor']}")
+        print(f"  Year:             {c['year']}")
+        print(f"  Family:           {c['family']}")
+        print(f"  Socket:           {', '.join(c['socket'])}")
+        print(f"  Clock:            {c['clock_mhz']} MHz")
+        print(f"  Cores / threads:  {c['cores']} / {c['threads']}")
+        print(f"  FSB:              {c['fsb_mhz']} MHz")
+        print(f"  Cache:            {c['cache_kb']} KB")
+        print(f"  ISA/features:     {', '.join(c['isa'])}")
+        print(f"  Memory:           {', '.join(c['memory'])}")
+        print(f"  Max RAM profile:  {c['ram_max']}MB")
+        print(f"  Simulation index: {c['score']}")
+        print()
+
+    def cmd_cpuinfo(self, *args):
+        self.cmd_cpu(*args)
+
+    def cmd_cpus(self, *args):
+        print("\n───── HISTORICAL CPU RIGS ─────")
+        print(f"{'CPU ID':<20}{'YEAR':>6}{'CLOCK':>11}{'SOCKET':<20}{'RAM':>10}  DESCRIPTION")
+        print("-" * 112)
+        for cpu_id, c in CPU_RIGS.items():
+            print(f"{cpu_id:<20}{c['year']:>6}{str(c['clock_mhz'])+'MHz':>11}{'/'.join(c['socket']):<20}{str(c['ram_max'])+'MB':>10}  {c['label']}")
+        print("\nAttach with: ATTACHCPU <CPU_ID>\n")
+
+    def cmd_attachcpu(self, *args):
+        if not args:
+            print("Usage: ATTACHCPU <CPU_ID>")
+            return
+        cpu_id = args[0].upper()
+        if cpu_id not in CPU_RIGS:
+            print(f"?UNKNOWN CPU: {cpu_id} (type CPUS for a list)")
+            return
+        if self.motherboard_id:
+            ok, reason = _cpu_mb_compatible(CPU_RIGS[cpu_id], MOTHERBOARD_RIGS[self.motherboard_id])
+            if not ok:
+                print(f"?ATTACHCPU FAILED: {reason}")
+                return
+        self.cpu_id = cpu_id
+        self.system_ram_mb = min(self.system_ram_mb, CPU_RIGS[cpu_id]["ram_max"])
+        if self.gpu:
+            self.gpu.cpu_id = cpu_id
+            self.gpu.ram_mb = self.system_ram_mb
+        print(f"✓ CPU ATTACHED: {CPU_RIGS[cpu_id]['label']} [{cpu_id}]")
+
+    def cmd_detachcpu(self, *args):
+        if self.cpu_id == "GENERIC":
+            print("?NO EXPLICIT CPU ATTACHED")
+            return
+        old = self.cpu_id
+        self.cpu_id = "GENERIC"
+        if self.gpu:
+            self.gpu.cpu_id = "GENERIC"
+        print(f"✓ CPU DETACHED: {CPU_RIGS[old]['label']} [{old}]")
+
+    def cmd_cpbench(self, *args):
+        self.cmd_cpubench(*args)
+
+    def cmd_cpubench(self, *args):
+        try:
+            load = int(args[0]) if args else 50
+            load = max(0, min(100, load))
+            c = CPU_RIGS[self.cpu_id]
+            result = _cpu_work_score(c, load)
+            print("\n───── CPU RIG BENCH ─────")
+            print(f"  CPU:              {c['label']}")
+            print(f"  Synthetic load:   {load}%")
+            print(f"  Throughput index: {result['throughput']:.1f}")
+            print(f"  Work units:       {result['time_units']:.4f}")
+            print("  NOTE:             Synthetic RetroMedia model; not a historical benchmark.")
+            print()
+        except ValueError as e:
+            print(f"?CPUBENCH FAILED: {e}")
+
+    def cmd_mb(self, *args):
+        if args:
+            mb_id = args[0].upper()
+            if mb_id not in MOTHERBOARD_RIGS:
+                print(f"?UNKNOWN MOTHERBOARD: {mb_id} (type MOTHERBOARDS for a list)")
+                return
+            self.motherboard_id = mb_id
+        if not self.motherboard_id:
+            print("?NO MOTHERBOARD ATTACHED")
+            return
+        m = MOTHERBOARD_RIGS[self.motherboard_id]
+        print("\n───── MOTHERBOARD RIG ─────")
+        print(f"  Model:            {m['label']} [{self.motherboard_id}]")
+        print(f"  Vendor / year:    {m['vendor']} / {m['year']}")
+        print(f"  Chipset:          {m['chipset']}")
+        print(f"  CPU sockets:      {', '.join(m['socket'])}")
+        print(f"  FSB options:      {', '.join(str(x) for x in m['fsb_mhz'])} MHz")
+        print(f"  RAM:              {', '.join(m['ram_type'])} / {m['max_ram_mb']}MB max")
+        print(f"  ISA:              {'YES' if m['isa'] else 'NO'}")
+        print(f"  PCI:              {'YES' if m['pci'] else 'NO'}")
+        print(f"  AGP:              {'YES' if m['agp'] else 'NO'}" + (f" ({m['agp_version']:.1f} / modes {','.join(map(str,m['agp_modes']))})" if m['agp'] else ""))
+        print(f"  IDE devices:      {m['max_ide_devices'] if m['ide'] else 0}")
+        print(f"  Buses:            {', '.join(m['buses'])}")
+        print()
+
+    def cmd_mbinfo(self, *args):
+        self.cmd_mb(*args)
+
+    def cmd_motherboards(self, *args):
+        print("\n───── HISTORICAL MOTHERBOARD RIGS ─────")
+        print(f"{'MODEL ID':<20}{'YEAR':>6}{'RAM':>10}{'AGP':>9}{'FSB':>18}  DESCRIPTION")
+        print("-" * 108)
+        for mb_id, m in MOTHERBOARD_RIGS.items():
+            agp = f"{m['agp_version']:.1f}" if m['agp'] else "-"
+            fsb = "/".join(str(x) for x in m['fsb_mhz'])
+            print(f"{mb_id:<20}{m['year']:>6}{str(m['max_ram_mb'])+'MB':>10}{agp:>9}{fsb:>18}  {m['label']}")
+        print("\nAttach with: ATTACHMB <MODEL_ID>\n")
+
+    def cmd_attachmb(self, *args):
+        if not args:
+            print("Usage: ATTACHMB <MODEL_ID>")
+            return
+        mb_id = args[0].upper()
+        if mb_id not in MOTHERBOARD_RIGS:
+            print(f"?UNKNOWN MOTHERBOARD: {mb_id} (type MOTHERBOARDS for a list)")
+            return
+        m = MOTHERBOARD_RIGS[mb_id]
+        if self.cpu_id != "GENERIC":
+            ok, reason = _cpu_mb_compatible(CPU_RIGS[self.cpu_id], m)
+            if not ok:
+                print(f"?ATTACHMB FAILED: {reason}")
+                return
+        self.motherboard_id = mb_id
+        self.system_ram_mb = min(self.system_ram_mb, m["max_ram_mb"])
+        if self.gpu:
+            self.gpu.mb_id = mb_id
+            self.gpu.ram_mb = self.system_ram_mb
+        print(f"✓ MOTHERBOARD ATTACHED: {m['label']} [{mb_id}]")
+
+    def cmd_detachmb(self, *args):
+        if not self.motherboard_id:
+            print("?NO MOTHERBOARD ATTACHED")
+            return
+        old = self.motherboard_id
+        self.motherboard_id = ""
+        if self.gpu:
+            self.gpu.mb_id = ""
+        print(f"✓ MOTHERBOARD DETACHED: {MOTHERBOARD_RIGS[old]['label']} [{old}]")
+
+    def cmd_checksystem(self, *args):
+        print("\n───── SYSTEM COMPATIBILITY CHECK ─────")
+        issues = []
+        if self.motherboard_id:
+            mb = MOTHERBOARD_RIGS[self.motherboard_id]
+            cpu = CPU_RIGS[self.cpu_id]
+            ok, reason = _cpu_mb_compatible(cpu, mb)
+            print(f"  CPU ↔ Motherboard: {'✓ COMPATIBLE' if ok else '✗ INCOMPATIBLE'}")
+            if not ok: issues.append(reason)
+            print(f"  System RAM:        {self.system_ram_mb}MB / {mb['max_ram_mb']}MB max")
+            if self.system_ram_mb > mb['max_ram_mb']:
+                issues.append("system RAM exceeds motherboard limit")
+        else:
+            print("  Motherboard:       NONE")
+        print(f"  CPU:               {CPU_RIGS[self.cpu_id]['label']} [{self.cpu_id}]")
+        if self.gpu:
+            gissues = self.gpu.system_check()
+            print(f"  GPU:               {self.gpu.spec['label']} [{self.gpu.model_id}]")
+            print(f"  GPU ↔ Platform:    {'✓ COMPATIBLE' if not gissues else '✗ CONFLICT'}")
+            issues.extend(gissues)
+        else:
+            print("  GPU:               NONE")
+        if issues:
+            print("\n  Result:            CONFLICTS DETECTED")
+            for issue in dict.fromkeys(issues):
+                print(f"   - {issue}")
+        else:
+            print("\n  Result:            ✓ SYSTEM PROFILE VALID")
+        print()
+
+    def cmd_bench(self, *args):
+        if self.gpu:
+            self.cmd_gpubench(*args)
+        else:
+            self.cmd_cpubench(*args)
 
     def cmd_hardware(self, *args):
         print("\n───── LEGACY HARDWARE DRIVES ─────")
@@ -2261,8 +2933,8 @@ HOST COMMANDS:
     def run(self):
         print("""
 ╔══════════════════════════════════════════════════════╗
-║        RETROMEDIA ULTIMATE - VIRTUAL MEDIA           ║
-║  Data Disks • Audio CDs (CD-DA) • Fixed Drives Rig   ║
+║         RETROMEDIA ULTIMATE - VIRTUAL MEDIA          ║
+║ Data Disks • Audio CDs • Hard Disks • Hardware Rigs  ║
 ╚══════════════════════════════════════════════════════╝
 Type HELP for commands, MEDIA for media types.
 """)
@@ -2290,6 +2962,16 @@ Type HELP for commands, MEDIA for media types.
             "USE": self.cmd_use, "DRIVES": self.cmd_drives,
             "HARDWARE": self.cmd_hardware,
             "XFER": self.cmd_xfer, "XMOVE": self.cmd_xmove,
+            "ATTACHGPU": self.cmd_attachgpu, "DETACHGPU": self.cmd_detachgpu,
+            "GPU": self.cmd_gpu, "GPUS": self.cmd_gpus, "GPUINFO": self.cmd_gpuinfo,
+            "GPUCAPS": self.cmd_gpucaps, "GPUHOST": self.cmd_gpuhost, "GPUCPUS": self.cmd_gpucpus,
+            "GPUBENCH": self.cmd_gpubench,
+            "ATTACHCPU": self.cmd_attachcpu, "DETACHCPU": self.cmd_detachcpu,
+            "CPU": self.cmd_cpu, "CPUINFO": self.cmd_cpuinfo, "CPUS": self.cmd_cpus,
+            "CPUBENCH": self.cmd_cpubench,
+            "ATTACHMB": self.cmd_attachmb, "DETACHMB": self.cmd_detachmb,
+            "MB": self.cmd_mb, "MBINFO": self.cmd_mbinfo, "MOTHERBOARDS": self.cmd_motherboards,
+            "CHECKSYSTEM": self.cmd_checksystem, "BENCH": self.cmd_bench,
             "HOSTLS": self.cmd_hostls, "CD": self.cmd_cd, "PWD": self.cmd_pwd,
         }
 
