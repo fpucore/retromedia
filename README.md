@@ -4,7 +4,8 @@
 </h1>
 
 Also check out:
-[<img src="https://img.shields.io/badge/github-RetroVinyl-brown?logo=github">](https://www.github.com/fpucore/retrovinyl) [<img src="https://img.shields.io/badge/github-RetroCart-blue?logo=github">](https://www/github.com/fpucore/retrocart) [<img src="https://img.shields.io/badge/github-RetroTape-green?logo=github">](https://www.github.com/fpucore/retrotape)
+
+[<img src="https://img.shields.io/badge/github-RetroVinyl-brown?logo=github">](https://www.github.com/fpucore/retrovinyl) [<img src="https://img.shields.io/badge/github-RetroCart-blue?logo=github">](https://www.github.com/fpucore/retrocart) [<img src="https://img.shields.io/badge/github-RetroTape-green?logo=github">](https://www.github.com/fpucore/retrotape)
 
 ```
 ╔══════════════════════════════════════════════════════════╗
