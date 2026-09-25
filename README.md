@@ -1,6 +1,6 @@
 # RetroMedia 💾
 
-```bash
+```
 ╔══════════════════════════════════════════════════════════╗
 ║           RETROMEDIA ULTIMATE - VIRTUAL MEDIA            ║
 ║   Data Storage • Audio CDs • Hard Disks • H/W+OS Rigs    ║
@@ -24,7 +24,7 @@ re-experience) the constraints and characteristics of vintage storage media with
 
 ## ✨ Features
 
-### 🎛️ Multi-Drive Virtual System
+### 🎛️ Multi-Drive Virtual Workstation
 
 * **Attach multiple drives simultaneously** — mix and match floppy, optical, USB, HDD, SSD, and NVMe
 
@@ -32,7 +32,7 @@ re-experience) the constraints and characteristics of vintage storage media with
 
 * **Switch between drives** with the `USE` command
 
-* Manage your virtual hardware array just like a real retro workstation
+* **Hardware profiling** to manage virtual hardware array, like a real workstation
 
 ### 📀 Authentic Media Simulation
 
@@ -93,7 +93,7 @@ It is recommended you compile the source code to an executable binary, using Nui
 # Method 1 - Compile & Install
 
 ```bash
-> gh repo clone https://www.github.com/fpucore/retromedia.git
+> gh repo clone fpucore/retromedia.git
 
 > goto retromedia
 
@@ -269,7 +269,7 @@ FINALIZE
 
 * **LITEON-GENERIC-OEM**    23.44 MB/s  23.44 MB/s  Lite-On Generic CD/DVD-RW
 
-### 🖴 Mechanical Hard Disks
+### 🗄️ Mechanical Hard Disks
 
 * **ST-225** (20MB, MFM, 610 KB/s)
 
@@ -401,7 +401,7 @@ required for RetroMedia's core operation or its use as a virtual storage medium 
 ## 🎮 Command Reference
 
 ### RETROMEDIA COMMANDS
-```bash
+```text
 
   CREATE <file> <media> [label]                     Create a new virtual medium (Data or Audio CD)
   LOAD <file>                                       Insert / load a medium
