@@ -285,7 +285,12 @@ FINALIZE
 
 ---
 
-## 🏗️ Supported Rigs
+## 🏗️ Supported Rig Profiles
+
+Rig Profiles are an optional, unique feature that lets users add more control and personality to their Rig.
+
+Users can define hardware details like motherboard, CPU, RAM, and GPU — completely optional, and not 
+required for RetroMedia's core operation or its use as a virtual storage medium tool.
 
 ### 🔌 Motherboard Profiles
 
@@ -360,6 +365,36 @@ FINALIZE
 * **DDR-PC2100-512**          2001      DDR      512MB      PC2100  512MB DDR-266 PC2100
 
 * **DDR-PC2700-1024**         2002      DDR     1024MB      PC2700  1GB DDR-333 PC2700
+
+### 🤖 GPU Profiles
+
+* **VOODOO1**               1996     4MBPCI                 38  3dfx Voodoo Graphics 4MB
+
+* **VOODOO2**               1998    12MBPCI                 72  3dfx Voodoo2 12MB
+
+* **VOODOO3-2000**          1999    16MBAGP/PCI            108  3dfx Voodoo3 2000 16MB
+
+* **VOODOO3-3000**          1999    16MBAGP/PCI            126  3dfx Voodoo3 3000 16MB
+
+* **VOODOO5-5500**          2000    64MBAGP/PCI            178  3dfx Voodoo5 5500 64MB
+
+* **RIVA128**               1997     4MBPCI/AGP             42  NVIDIA RIVA 128 4MB
+
+* **TNT2-ULTRA**            1999    32MBAGP                118  NVIDIA RIVA TNT2 Ultra 32MB
+
+* **GEFORCE256**            1999    32MBAGP                162  NVIDIA GeForce 256 32MB DDR
+
+* **GEFORCE2-GTS**          2000    32MBAGP                235  NVIDIA GeForce2 GTS 32MB
+
+* **ATI-RAGE128PRO**        1999    32MBAGP/PCI            100  ATI Rage 128 Pro 32MB
+
+* **MATROX-G400MAX**        1999    32MBAGP                132  Matrox Millennium G400 MAX 32MB
+
+* **S3-SAVAGE4**            1999    32MBAGP/PCI             91  S3 Savage4 Pro 32MB
+
+* **RADEON-256**            2000    64MBAGP                205  ATI Radeon DDR 64MB
+
+* **RADEON-7500**           2001    64MBAGP/PCI            250  ATI Radeon 7500 64MB
 
 ---
 
