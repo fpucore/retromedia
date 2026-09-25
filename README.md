@@ -1,6 +1,6 @@
 <h1>
   <img src="https://www.qanonsec.com/images/i.php?/upload/2026/09/25/20260925102623-bb1ef04b-2s.webp" alt="ag-img" />
-  RetroMedia 💾
+  💾 RetroMedia
 </h1>
 
 ```
