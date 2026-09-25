@@ -1,15 +1,17 @@
 #!/usr/bin/env python3
 """
-RetroMedia - Virtual removable & fixed media and hardware simulator
+RetroMedia - Virtual removable & fixed media and rig simulator
 
 Copyright (c) 2026 Chris McGimpsey-Jones
 Released under the MIT License
-
+    
 https://github.com/fpucore/retromedia
 
 Authentic capacities, transfer speeds, write buffering, Audio CD (CD-DA) creation,
 LightScribe physical etching, Multi-Era Copy Protection, Pirate/Hacker Overrides, 
 Drive Rigs, Cross-transfers, Cloning, Batch Ripping, and Playback via FFmpeg.
+
+Optional authentic virtual hardware and operating system simulation.
 """
 
 import os
@@ -337,6 +339,7 @@ MEDIA_SPECS = {
 # ====
 # GPU Rig specifications & simulation model
 # ====
+#
 # These are historical hardware profiles used by RetroMedia's *simulation* layer.
 # The performance coefficients are deliberately normalized so GPUBENCH can model
 # period-appropriate constraints without pretending to be a real hardware benchmark.
@@ -358,21 +361,21 @@ GPU_RIGS = {
     "VOODOO3-2000": {
         "label": "3dfx Voodoo3 2000 16MB",
         "year": 1999, "vram": 16, "bus": "AGP/PCI",
-        "api": ("Glide", "OpenGL", "Direct3D"), "fillrate": 286, "texture_rate": 286, "bandwidth": 5.5,
+        "api": ("Glide", "OpenGL", "Direct3D"), "fillrate": 143, "texture_rate": 286, "bandwidth": 2.3,
         "max_resolution": (2048, 1536), "max_color_depth": 16,
         "features": ("2d", "3d", "glide", "opengl", "d3d"), "perf_index": 108,
     },
     "VOODOO3-3000": {
         "label": "3dfx Voodoo3 3000 16MB",
         "year": 1999, "vram": 16, "bus": "AGP/PCI",
-        "api": ("Glide", "OpenGL", "Direct3D"), "fillrate": 333, "texture_rate": 333, "bandwidth": 5.3,
+        "api": ("Glide", "OpenGL", "Direct3D"), "fillrate": 166, "texture_rate": 333, "bandwidth": 2.7,
         "max_resolution": (2048, 1536), "max_color_depth": 16,
         "features": ("2d", "3d", "glide", "opengl", "d3d"), "perf_index": 126,
     },
     "VOODOO5-5500": {
         "label": "3dfx Voodoo5 5500 64MB",
         "year": 2000, "vram": 64, "bus": "AGP/PCI",
-        "api": ("Glide", "OpenGL", "Direct3D"), "fillrate": 667, "texture_rate": 667, "bandwidth": 7.5,
+        "api": ("Glide", "OpenGL", "Direct3D"), "fillrate": 667, "texture_rate": 667, "bandwidth": 5.3,
         "max_resolution": (2048, 1536), "max_color_depth": 32,
         "features": ("2d", "3d", "glide", "opengl", "d3d", "fsaa", "dual-gpu"), "perf_index": 178,
     },
@@ -407,35 +410,35 @@ GPU_RIGS = {
     "ATI-RAGE128PRO": {
         "label": "ATI Rage 128 Pro 32MB",
         "year": 1999, "vram": 32, "bus": "AGP/PCI",
-        "api": ("OpenGL", "Direct3D"), "fillrate": 250, "texture_rate": 250, "bandwidth": 3.2,
+        "api": ("OpenGL", "Direct3D"), "fillrate": 250, "texture_rate": 250, "bandwidth": 2.3,
         "max_resolution": (2048, 1536), "max_color_depth": 32,
         "features": ("2d", "3d", "opengl", "d3d", "32bit", "agp"), "perf_index": 100,
     },
     "MATROX-G400MAX": {
         "label": "Matrox Millennium G400 MAX 32MB",
         "year": 1999, "vram": 32, "bus": "AGP",
-        "api": ("OpenGL", "Direct3D"), "fillrate": 360, "texture_rate": 720, "bandwidth": 4.6,
+        "api": ("OpenGL", "Direct3D"), "fillrate": 360, "texture_rate": 720, "bandwidth": 6.4,
         "max_resolution": (2048, 1536), "max_color_depth": 32,
         "features": ("2d", "3d", "opengl", "d3d", "32bit", "agp", "dual-head"), "perf_index": 132,
     },
     "S3-SAVAGE4": {
         "label": "S3 Savage4 Pro 32MB",
         "year": 1999, "vram": 32, "bus": "AGP/PCI",
-        "api": ("OpenGL", "Direct3D"), "fillrate": 250, "texture_rate": 500, "bandwidth": 2.9,
+        "api": ("OpenGL", "Direct3D"), "fillrate": 140, "texture_rate": 500, "bandwidth": 1.1,
         "max_resolution": (2048, 1536), "max_color_depth": 32,
         "features": ("2d", "3d", "opengl", "d3d", "32bit", "agp", "s3tc"), "perf_index": 91,
     },
     "RADEON-256": {
         "label": "ATI Radeon DDR 64MB",
         "year": 2000, "vram": 64, "bus": "AGP",
-        "api": ("OpenGL", "Direct3D"), "fillrate": 480, "texture_rate": 960, "bandwidth": 5.5,
+        "api": ("OpenGL", "Direct3D"), "fillrate": 332, "texture_rate": 960, "bandwidth": 5.3,
         "max_resolution": (2048, 1536), "max_color_depth": 32,
         "features": ("2d", "3d", "opengl", "d3d", "32bit", "hardware-tl", "agp", "hyper-z"), "perf_index": 205,
     },
     "RADEON-7500": {
         "label": "ATI Radeon 7500 64MB",
         "year": 2001, "vram": 64, "bus": "AGP/PCI",
-        "api": ("OpenGL", "Direct3D"), "fillrate": 600, "texture_rate": 1200, "bandwidth": 5.8,
+        "api": ("OpenGL", "Direct3D"), "fillrate": 580, "texture_rate": 1200, "bandwidth": 5.8,
         "max_resolution": (2048, 1536), "max_color_depth": 32,
         "features": ("2d", "3d", "opengl", "d3d", "32bit", "agp", "hyper-z"), "perf_index": 250,
     },
@@ -448,8 +451,10 @@ CPU_RIGS = {
     "PENTIUM-III-600": {"label": "Intel Pentium III 600", "vendor": "Intel", "year": 1999, "family": "P6", "socket": ("Slot 1", "Socket 370"), "clock_mhz": 600, "cores": 1, "threads": 1, "fsb_mhz": 100, "cache_kb": 256, "isa": ("x86", "MMX", "SSE"), "score": 105, "ram_max": 1024, "memory": ("SDRAM",), "bus": "PCI/AGP/ISA"},
     "PENTIUM-III-1000": {"label": "Intel Pentium III 1GHz", "vendor": "Intel", "year": 2000, "family": "P6", "socket": ("Socket 370",), "clock_mhz": 1000, "cores": 1, "threads": 1, "fsb_mhz": 133, "cache_kb": 256, "isa": ("x86", "MMX", "SSE"), "score": 135, "ram_max": 1024, "memory": ("SDRAM",), "bus": "PCI/AGP"},
     "PENTIUM-4-1500": {"label": "Intel Pentium 4 1.5GHz", "vendor": "Intel", "year": 2000, "family": "NetBurst", "socket": ("Socket 423",), "clock_mhz": 1500, "cores": 1, "threads": 1, "fsb_mhz": 100, "cache_kb": 256, "isa": ("x86", "MMX", "SSE", "SSE2"), "score": 150, "ram_max": 2048, "memory": ("RDRAM",), "bus": "PCI/AGP"},
+    "PENTIUM-4-2400-478": {"label": "Intel Pentium 4 2.4GHz", "vendor": "Intel", "year": 2002, "family": "NetBurst", "socket": ("Socket 478",), "clock_mhz": 2400, "cores": 1, "threads": 1, "fsb_mhz": 133, "cache_kb": 512, "isa": ("x86", "MMX", "SSE", "SSE2"), "score": 225, "ram_max": 2048, "memory": ("RDRAM", "DDR"), "bus": "PCI/AGP"},
+    "K6-2-400": {"label": "AMD K6-2 400 (400MHz)", "vendor": "AMD", "year": 1999, "family": "K6", "socket": ("Super Socket 7", "Socket 7"), "clock_mhz": 400, "cores": 1, "threads": 1, "fsb_mhz": 100, "cache_kb": 512, "isa": ("x86", "MMX", "3DNow!"), "score": 70, "ram_max": 1024, "memory": ("EDO", "SDRAM"), "bus": "PCI/AGP/ISA"},
     "ATHLON-1000": {"label": "AMD Athlon 1GHz", "vendor": "AMD", "year": 2000, "family": "K7", "socket": ("Socket A",), "clock_mhz": 1000, "cores": 1, "threads": 1, "fsb_mhz": 266, "cache_kb": 384, "isa": ("x86", "MMX", "3DNow!", "Enhanced 3DNow!"), "score": 145, "ram_max": 1536, "memory": ("SDRAM",), "bus": "PCI/AGP"},
-    "DURON-800": {"label": "AMD Duron 800", "vendor": "AMD", "year": 2000, "family": "K7", "socket": ("Socket A",), "clock_mhz": 800, "cores": 1, "threads": 1, "fsb_mhz": 200, "cache_kb": 192, "isa": ("x86", "MMX", "3DNow!", "Enhanced 3DNow!"), "score": 110, "ram_max": 1536, "memory": ("SDRAM",), "bus": "PCI/AGP"},
+    "DURON-800": {"label": "AMD Duron 800 (800MHz)", "vendor": "AMD", "year": 2000, "family": "K7", "socket": ("Socket A",), "clock_mhz": 800, "cores": 1, "threads": 1, "fsb_mhz": 200, "cache_kb": 192, "isa": ("x86", "MMX", "3DNow!", "Enhanced 3DNow!"), "score": 110, "ram_max": 1536, "memory": ("SDRAM",), "bus": "PCI/AGP"},
     "ATHLON-XP-1800": {"label": "AMD Athlon XP 1800+", "vendor": "AMD", "year": 2001, "family": "K7", "socket": ("Socket A",), "clock_mhz": 1533, "cores": 1, "threads": 1, "fsb_mhz": 266, "cache_kb": 384, "isa": ("x86", "MMX", "3DNow!", "SSE"), "score": 210, "ram_max": 3072, "memory": ("DDR",), "bus": "PCI/AGP"},
     "CYRIX-MII-300": {"label": "Cyrix MII 300", "vendor": "Cyrix", "year": 1998, "family": "6x86", "socket": ("Socket 7",), "clock_mhz": 233, "cores": 1, "threads": 1, "fsb_mhz": 66, "cache_kb": 256, "isa": ("x86", "MMX"), "score": 32, "ram_max": 256, "memory": ("EDO", "SDRAM"), "bus": "PCI/ISA"},
     "VIA-C3-800": {"label": "VIA C3 800", "vendor": "VIA", "year": 2001, "family": "C3", "socket": ("Socket 370",), "clock_mhz": 800, "cores": 1, "threads": 1, "fsb_mhz": 133, "cache_kb": 192, "isa": ("x86", "MMX", "3DNow!", "SSE"), "score": 88, "ram_max": 1024, "memory": ("SDRAM", "DDR"), "bus": "PCI/AGP"},
@@ -464,12 +469,248 @@ MOTHERBOARD_RIGS = {
     "INTEL-430TX": {"label": "Intel 430TX Triton II", "vendor": "Intel", "year": 1996, "socket": ("Socket 7",), "fsb_mhz": (66, 75, 83), "ram_type": ("EDO", "SDRAM"), "max_ram_mb": 256, "isa": True, "pci": True, "agp": False, "agp_version": 0.0, "agp_modes": (), "ide": True, "max_ide_devices": 4, "buses": ("ISA", "PCI"), "chipset": "430TX"},
     "INTEL-440BX": {"label": "Intel 440BX", "vendor": "Intel", "year": 1998, "socket": ("Slot 1", "Socket 370"), "fsb_mhz": (66, 100, 133), "ram_type": ("SDRAM",), "max_ram_mb": 1024, "isa": True, "pci": True, "agp": True, "agp_version": 1.0, "agp_modes": (1, 2), "ide": True, "max_ide_devices": 4, "buses": ("ISA", "PCI", "AGP"), "chipset": "440BX"},
     "INTEL-815": {"label": "Intel 815E", "vendor": "Intel", "year": 2000, "socket": ("Socket 370",), "fsb_mhz": (66, 100, 133), "ram_type": ("SDRAM",), "max_ram_mb": 512, "isa": False, "pci": True, "agp": True, "agp_version": 2.0, "agp_modes": (1, 2, 4), "ide": True, "max_ide_devices": 4, "buses": ("PCI", "AGP"), "chipset": "815E"},
-    "INTEL-850": {"label": "Intel 850", "vendor": "Intel", "year": 2000, "socket": ("Socket 423",), "fsb_mhz": (100, 133), "ram_type": ("RDRAM",), "max_ram_mb": 2048, "isa": False, "pci": True, "agp": True, "agp_version": 4.0, "agp_modes": (4,), "ide": True, "max_ide_devices": 4, "buses": ("PCI", "AGP"), "chipset": "850"},
+    "INTEL-850": {"label": "Intel 850", "vendor": "Intel", "year": 2000, "socket": ("Socket 423",), "fsb_mhz": (400,), "ram_type": ("RDRAM",), "max_ram_mb": 2048, "isa": False, "pci": True, "agp": True, "agp_version": 4.0, "agp_modes": (4,), "ide": True, "max_ide_devices": 4, "buses": ("PCI", "AGP"), "chipset": "850"},
     "AMD-751": {"label": "AMD 751 / Irongate", "vendor": "AMD", "year": 1999, "socket": ("Slot A", "Socket A"), "fsb_mhz": (100, 200, 266), "ram_type": ("SDRAM",), "max_ram_mb": 768, "isa": True, "pci": True, "agp": True, "agp_version": 2.0, "agp_modes": (1, 2), "ide": True, "max_ide_devices": 4, "buses": ("ISA", "PCI", "AGP"), "chipset": "AMD-751"},
     "VIA-KT133": {"label": "VIA KT133", "vendor": "VIA", "year": 2000, "socket": ("Socket A",), "fsb_mhz": (200, 266), "ram_type": ("SDRAM",), "max_ram_mb": 1536, "isa": True, "pci": True, "agp": True, "agp_version": 4.0, "agp_modes": (1, 2, 4), "ide": True, "max_ide_devices": 4, "buses": ("ISA", "PCI", "AGP"), "chipset": "KT133"},
     "SIS-735": {"label": "SiS 735", "vendor": "SiS", "year": 2001, "socket": ("Socket A",), "fsb_mhz": (200, 266), "ram_type": ("DDR",), "max_ram_mb": 3072, "isa": True, "pci": True, "agp": True, "agp_version": 4.0, "agp_modes": (1, 2, 4), "ide": True, "max_ide_devices": 4, "buses": ("ISA", "PCI", "AGP"), "chipset": "SiS 735"},
-    "INTEL-850E": {"label": "Intel 850E", "vendor": "Intel", "year": 2002, "socket": ("Socket 478",), "fsb_mhz": (100, 133), "ram_type": ("RDRAM",), "max_ram_mb": 2048, "isa": False, "pci": True, "agp": True, "agp_version": 4.0, "agp_modes": (4,), "ide": True, "max_ide_devices": 4, "buses": ("PCI", "AGP"), "chipset": "850E"},
+    "INTEL-850E": {"label": "Intel 850E", "vendor": "Intel", "year": 2002, "socket": ("Socket 478",), "fsb_mhz": (400, 533), "ram_type": ("RDRAM",), "max_ram_mb": 2048, "isa": False, "pci": True, "agp": True, "agp_version": 4.0, "agp_modes": (4,), "ide": True, "max_ide_devices": 4, "buses": ("PCI", "AGP"), "chipset": "850E"},
 }
+
+
+# ====
+# Historical RAM module profiles
+# ====
+RAM_PROFILES = {
+    "FPM-16": {"label": "16MB FPM DRAM", "year": 1994, "type": "FPM", "capacity_mb": 16, "speed": "70ns"},
+    "FPM-32": {"label": "32MB FPM DRAM", "year": 1995, "type": "FPM", "capacity_mb": 32, "speed": "70ns"},
+    "EDO-32": {"label": "32MB EDO DRAM", "year": 1996, "type": "EDO", "capacity_mb": 32, "speed": "60ns"},
+    "EDO-64": {"label": "64MB EDO DRAM", "year": 1997, "type": "EDO", "capacity_mb": 64, "speed": "60ns"},
+    "SDRAM-PC66-64": {"label": "64MB SDRAM PC66", "year": 1997, "type": "SDRAM", "capacity_mb": 64, "speed": "PC66"},
+    "SDRAM-PC100-128": {"label": "128MB SDRAM PC100", "year": 1998, "type": "SDRAM", "capacity_mb": 128, "speed": "PC100"},
+    "SDRAM-PC133-256": {"label": "256MB SDRAM PC133", "year": 1999, "type": "SDRAM", "capacity_mb": 256, "speed": "PC133"},
+    "SDRAM-PC133-512": {"label": "512MB SDRAM PC133", "year": 2000, "type": "SDRAM", "capacity_mb": 512, "speed": "PC133"},
+    "RDRAM-PC800-256": {"label": "256MB RDRAM PC800", "year": 2000, "type": "RDRAM", "capacity_mb": 256, "speed": "PC800"},
+    "RDRAM-PC800-512": {"label": "512MB RDRAM PC800", "year": 2001, "type": "RDRAM", "capacity_mb": 512, "speed": "PC800"},
+    "DDR-PC2100-512": {"label": "512MB DDR-266 PC2100", "year": 2001, "type": "DDR", "capacity_mb": 512, "speed": "PC2100"},
+    "DDR-PC2700-1024": {"label": "1GB DDR-333 PC2700", "year": 2002, "type": "DDR", "capacity_mb": 1024, "speed": "PC2700"},
+}
+
+
+# ====
+# Operating System profiles / Rig Adaptations
+# ====
+# These profiles describe historical installation requirements and are used by
+# the installation *simulation*. RetroMedia never activates software or claims
+# that a generated product key is genuine.
+OS_PROFILES = {
+    "DOS-6.22": {
+        "label": "MS-DOS 6.22", "family": "DOS", "year": 1994,
+        "arch": "x86", "min_ram_mb": 1, "min_cpu_year": 1981,
+        "source_media": "3.5-1.44m", "install_size": 6 * MB,
+        "filesystems": ("FAT12", "FAT16"), "boot": ("BIOS",),
+        "storage_families": ("hdd-vintage", "hdd-modern"), "min_disk_mb": 10,
+    },
+    "WIN-3.1": {
+        "label": "Windows 3.1", "family": "Windows", "year": 1992,
+        "arch": "x86", "min_ram_mb": 2, "min_cpu_year": 1985,
+        "source_media": "3.5-1.44m", "install_size": 15 * MB,
+        "filesystems": ("FAT16",), "boot": ("BIOS",),
+        "storage_families": ("hdd-vintage", "hdd-modern"), "min_disk_mb": 20,
+    },
+    "WIN-95": {
+        "label": "Windows 95", "family": "Windows", "year": 1995,
+        "arch": "x86", "min_ram_mb": 8, "min_cpu_year": 1989,
+        "source_media": "cd-1x", "install_size": 45 * MB,
+        "filesystems": ("FAT16", "FAT32"), "boot": ("BIOS",),
+        "storage_families": ("hdd-vintage", "hdd-modern"), "min_disk_mb": 120,
+    },
+    "WIN-NT4": {
+        "label": "Windows NT 4.0 Workstation", "family": "Windows", "year": 1996,
+        "arch": "x86", "min_ram_mb": 12, "min_cpu_year": 1989,
+        "source_media": "cd-4x", "install_size": 120 * MB,
+        "filesystems": ("FAT16", "NTFS"), "boot": ("BIOS",),
+        "storage_families": ("hdd-vintage", "hdd-modern"), "min_disk_mb": 120,
+    },
+    "WIN-98SE": {
+        "label": "Windows 98 SE", "family": "Windows", "year": 1999,
+        "arch": "x86", "min_ram_mb": 24, "min_cpu_year": 1989,
+        "source_media": "cd-8x", "install_size": 180 * MB,
+        "filesystems": ("FAT16", "FAT32"), "boot": ("BIOS",),
+        "storage_families": ("hdd-vintage", "hdd-modern"), "min_disk_mb": 300,
+    },
+    "WIN-ME": {
+        "label": "Windows ME", "family": "Windows", "year": 2000,
+        "arch": "x86", "min_ram_mb": 32, "min_cpu_year": 1993,
+        "source_media": "cd-16x", "install_size": 250 * MB,
+        "filesystems": ("FAT32",), "boot": ("BIOS",),
+        "storage_families": ("hdd-vintage", "hdd-modern"), "min_disk_mb": 320,
+    },
+    "WIN-2000": {
+        "label": "Windows 2000 Professional", "family": "Windows", "year": 2000,
+        "arch": "x86", "min_ram_mb": 32, "min_cpu_year": 1993,
+        "source_media": "cd-16x", "install_size": 650 * MB,
+        "filesystems": ("FAT32", "NTFS"), "boot": ("BIOS",),
+        "storage_families": ("hdd-vintage", "hdd-modern", "ssd"), "min_disk_mb": 1000,
+    },
+    "WIN-XP": {
+        "label": "Windows XP (Professional)", "family": "Windows", "year": 2001,
+        "arch": "x86", "min_ram_mb": 64, "min_cpu_year": 1993,
+        "source_media": "cd-16x", "install_size": 1200 * MB,
+        "filesystems": ("FAT32", "NTFS"), "boot": ("BIOS",),
+        "storage_families": ("hdd-vintage", "hdd-modern", "ssd"), "min_disk_mb": 1500,
+    },
+    "WIN-2003-SERVER": {
+        "label": "Windows Server 2003 (Standard)", "family": "Windows", "year": 2003,
+        "arch": "x86/x64", "min_ram_mb": 128, "min_cpu_year": 1993,
+        "source_media": "cd-16x", "install_size": 1500 * MB,
+        "filesystems": ("NTFS", "FAT32", "FAT16"), "boot": ("BIOS",),
+        "storage_families": ("hdd-modern", "ssd"), "min_disk_mb": 1500,
+    },
+    "WIN-VISTA": {
+        "label": "Windows Vista (Ultimate)", "family": "Windows", "year": 2006,
+        "arch": "x86/x64", "min_ram_mb": 512, "min_cpu_year": 1999,
+        "source_media": "dvd-r", "install_size": 3500 * MB,
+        "filesystems": ("NTFS",), "boot": ("BIOS", "UEFI"),
+        "storage_families": ("hdd-modern", "ssd"), "min_disk_mb": 15000,
+    },
+    "WIN-7": {
+        "label": "Windows 7 (Ultimate)", "family": "Windows", "year": 2009,
+        "arch": "x86/x64", "min_ram_mb": 1024, "min_cpu_year": 2000,
+        "source_media": "dvd-r", "install_size": 4500 * MB,
+        "filesystems": ("NTFS",), "boot": ("BIOS", "UEFI"),
+        "storage_families": ("hdd-modern", "ssd"), "min_disk_mb": 16000,
+    },
+    "WIN-8.1": {
+        "label": "Windows 8.1 Pro", "family": "Windows", "year": 2013,
+        "arch": "x86/x64", "min_ram_mb": 1024, "min_cpu_year": 2004,
+        "source_media": "dvd-r", "install_size": 4200 * MB,
+        "filesystems": ("NTFS",), "boot": ("BIOS", "UEFI"),
+        "storage_families": ("hdd-modern", "ssd"), "min_disk_mb": 16000,
+    },
+    "WIN-10": {
+        "label": "Windows 10 Pro", "family": "Windows", "year": 2015,
+        "arch": "x86/x64", "min_ram_mb": 1024, "min_cpu_year": 2005,
+        "source_media": "dvd-r", "install_size": 5500 * MB,
+        "filesystems": ("NTFS",), "boot": ("BIOS", "UEFI"),
+        "storage_families": ("hdd-modern", "ssd", "nvme"), "min_disk_mb": 32000,
+    },
+    "WIN-11": {
+        "label": "Windows 11 Pro", "family": "Windows", "year": 2021,
+        "arch": "x64", "min_ram_mb": 4096, "min_cpu_year": 2017,
+        "source_media": "dvd-r", "install_size": 6500 * MB,
+        "filesystems": ("NTFS",), "boot": ("UEFI",),
+        "storage_families": ("hdd-modern", "ssd", "nvme"), "min_disk_mb": 64000,
+        "requires_tpm": True, "requires_secure_boot": True,
+    },
+    "SLACKWARE-1.0": {
+        "label": "Slackware Linux 1.0", "family": "Linux", "year": 1993,
+        "arch": "x86", "min_ram_mb": 8, "min_cpu_year": 1985,
+        "source_media": "3.5-1.44m", "install_size": 50 * MB,
+        "filesystems": ("ext2", "FAT16"), "boot": ("BIOS",),
+        "storage_families": ("hdd-vintage", "hdd-modern"), "min_disk_mb": 50,
+    },
+    "DEBIAN-3.0": {
+        "label": "Debian GNU/Linux 3.0 (Woody)", "family": "Linux", "year": 2002,
+        "arch": "x86", "min_ram_mb": 32, "min_cpu_year": 1989,
+        "source_media": "cd-1x", "install_size": 450 * MB,
+        "filesystems": ("ext2", "ext3", "FAT32"), "boot": ("BIOS",),
+        "storage_families": ("hdd-vintage", "hdd-modern"), "min_disk_mb": 500,
+    },
+    "UBUNTU-4.10": {
+        "label": "Ubuntu 4.10 (Warty Warthog)", "family": "Linux", "year": 2004,
+        "arch": "x86", "min_ram_mb": 64, "min_cpu_year": 1995,
+        "source_media": "cd-4x", "install_size": 650 * MB,
+        "filesystems": ("ext2", "ext3", "FAT32"), "boot": ("BIOS",),
+        "storage_families": ("hdd-modern",), "min_disk_mb": 2500,
+    },
+    "ARCH-LINUX": {
+        "label": "Arch Linux", "family": "Linux", "year": 2002,
+        "arch": "x86", "min_ram_mb": 32, "min_cpu_year": 1995,
+        "source_media": "cd-1x", "install_size": 300 * MB,
+        "filesystems": ("ext2", "ext3", "FAT32"), "boot": ("BIOS",),
+        "storage_families": ("hdd-vintage", "hdd-modern"), "min_disk_mb": 1000,
+    },
+    "NETBSD-1.0": {
+        "label": "NetBSD 1.0", "family": "BSD", "year": 1994,
+        "arch": "x86", "min_ram_mb": 4, "min_cpu_year": 1985,
+        "source_media": "3.5-1.44m", "install_size": 65 * MB,
+        "filesystems": ("FFS", "UFS", "FAT16"), "boot": ("BIOS",),
+        "storage_families": ("hdd-vintage", "hdd-modern"), "min_disk_mb": 65,
+    },
+    "FREEBSD-4.11": {
+        "label": "FreeBSD 4.11", "family": "BSD", "year": 2005,
+        "arch": "x86", "min_ram_mb": 24, "min_cpu_year": 1989,
+        "source_media": "cd-4x", "install_size": 350 * MB,
+        "filesystems": ("UFS", "FAT32"), "boot": ("BIOS",),
+        "storage_families": ("hdd-vintage", "hdd-modern"), "min_disk_mb": 300,
+    },
+    "SOLARIS-7": {
+        "label": "Sun Microsystems Solaris 7", "family": "Unix", "year": 1998,
+        "arch": "SPARC/x86", "min_ram_mb": 32, "min_cpu_year": 1989,
+        "source_media": "cd-1x", "install_size": 600 * MB,
+        "filesystems": ("UFS", "FAT16"), "boot": ("BIOS", "OpenBoot"),
+        "storage_families": ("hdd-vintage", "hdd-modern"), "min_disk_mb": 600,
+    },
+    "OS2-WARP4": {
+        "label": "IBM OS/2 Warp 4", "family": "OS/2", "year": 1996,
+        "arch": "x86", "min_ram_mb": 8, "min_cpu_year": 1989,
+        "source_media": "cd-1x", "install_size": 100 * MB,
+        "filesystems": ("HPFS", "FAT16"), "boot": ("BIOS",),
+        "storage_families": ("hdd-vintage", "hdd-modern"), "min_disk_mb": 120,
+    },
+    "BEOS-5": {
+        "label": "BeOS 5", "family": "BeOS", "year": 2000,
+        "arch": "x86", "min_ram_mb": 32, "min_cpu_year": 1995,
+        "source_media": "cd-1x", "install_size": 400 * MB,
+        "filesystems": ("BFS",), "boot": ("BIOS",),
+        "storage_families": ("hdd-modern",), "min_disk_mb": 600,
+    },
+}
+
+# Transfer/install media size and final installed footprint are intentionally
+# separate concepts. Profiles currently default to the same footprint until a
+# historical profile needs a more specific post-install size.
+for _profile in OS_PROFILES.values():
+    _profile.setdefault("installed_size", _profile["install_size"])
+
+OS_FAMILY_ORDER = ("Windows", "Linux", "BSD", "Unix", "DOS", "OS/2", "BeOS")
+STORAGE_DISK_FAMILIES = ("hdd-vintage", "hdd-modern", "ssd", "nvme")
+
+
+def _os_storage_compatible(profile: dict, disk: "VirtualDisk") -> Tuple[bool, str]:
+    family = disk.spec["family"]
+    if family not in profile["storage_families"]:
+        return False, f"{profile['label']} does not support {disk.spec['label']} as an installation target"
+    if disk.size < profile["min_disk_mb"] * MB:
+        return False, f"installation requires at least {profile['min_disk_mb']}MB; target provides {disk.size / MB:.0f}MB"
+    return True, ""
+
+
+def _os_platform_compatibility(profile: dict, shell: "Shell", disk: "VirtualDisk") -> List[str]:
+    issues: List[str] = []
+    cpu = CPU_RIGS.get(shell.cpu_id, CPU_RIGS["GENERIC"])
+    if shell.cpu_id != "GENERIC" and cpu["year"] < profile["min_cpu_year"]:
+        issues.append(f"CPU era ({cpu['year']}) predates minimum supported CPU era ({profile['min_cpu_year']})")
+    if shell.system_ram_mb < profile["min_ram_mb"]:
+        issues.append(f"RAM {shell.system_ram_mb}MB is below the {profile['min_ram_mb']}MB minimum")
+    ok, reason = _os_storage_compatible(profile, disk)
+    if not ok:
+        issues.append(reason)
+
+    if profile.get("requires_tpm"):
+        # RetroMedia's current historical motherboard profiles do not model TPM 2.0.
+        issues.append("TPM 2.0 is required; no TPM 2.0 is modeled by this historical rig")
+    if profile.get("requires_secure_boot"):
+        issues.append("Secure Boot is required; historical BIOS/UEFI profile does not provide it")
+
+    if shell.motherboard_id:
+        mb = MOTHERBOARD_RIGS[shell.motherboard_id]
+        if disk.spec["family"] in ("hdd-vintage", "hdd-modern") and not mb.get("ide", False):
+            issues.append(f"{mb['label']} has no modeled IDE storage interface")
+        if disk.spec["family"] == "nvme" and "PCIe" not in tuple(x.upper() for x in mb.get("buses", ())):
+            issues.append(f"{mb['label']} has no modeled PCIe/NVMe interface")
+
+    return issues
 
 
 def _cpu_mb_compatible(cpu: dict, mb: dict) -> Tuple[bool, str]:
@@ -781,6 +1022,8 @@ class VirtualDisk:
         self.loaded = False
         self.hardware_id: str = "GENERIC"
         self.hardware_spec: Optional[dict] = None
+        self.adaptations: List[dict] = []
+        self.installed_footprint: int = 0
 
     @classmethod
     def create(cls, path: str, media: str, label: str = "") -> "VirtualDisk":
@@ -825,7 +1068,7 @@ class VirtualDisk:
     def used(self) -> int:
         if self.is_audio:
             return sum(t["size"] for t in self.tracks)
-        return sum(e["size"] for e in self.toc.values())
+        return sum(e["size"] for e in self.toc.values()) + self.installed_footprint
 
     @property
     def free(self) -> int:
@@ -861,6 +1104,8 @@ class VirtualDisk:
             "finalized": self.finalized,
             "burning_engine": self.burning_engine,
             "tracks": self.tracks,
+            "adaptations": self.adaptations,
+            "installed_footprint": self.installed_footprint,
         }
         header_json = json.dumps(header_obj, ensure_ascii=False).encode("utf-8")
         toc_json = json.dumps(self.toc, ensure_ascii=False).encode("utf-8")
@@ -897,6 +1142,8 @@ class VirtualDisk:
             self.finalized = header.get("finalized", False)
             self.burning_engine = header.get("burning_engine", "")
             self.tracks = header.get("tracks", [])
+            self.adaptations = header.get("adaptations", [])
+            self.installed_footprint = int(header.get("installed_footprint", sum(a.get("installed_size", a.get("install_size", 0)) for a in self.adaptations)))
 
             toc_len = struct.unpack("<I", f.read(4))[0]
             self.toc = json.loads(f.read(toc_len).decode("utf-8"))
@@ -1121,6 +1368,8 @@ class VirtualDisk:
         self.toc = {}
         self.tracks = []
         self.data_blob = bytearray()
+        self.adaptations = []
+        self.installed_footprint = 0
         if self.spec["rewritable"]:
             self.finalized = False
         self.burning_engine = ""
@@ -1577,97 +1826,337 @@ class Shell:
                 pass
 
     # ---- Shell Commands ----
+
+    # ---- Operating System / Rig Adaptation ----
+    def _disk_path_for_slot(self, slot: str) -> str:
+        return os.path.abspath(f"retromedia-{slot}.rmd")
+
+    def cmd_disks(self, *args):
+        print("\n───── INSTALLATION TARGETS ─────")
+        print(f"{'KEY':<18}{'CAPACITY':>12}{'READ':>12}{'WRITE':>12}  LABEL")
+        print("-" * 82)
+        for key, spec in MEDIA_SPECS.items():
+            if spec["family"] not in STORAGE_DISK_FAMILIES:
+                continue
+            print(f"{key:<18}{self.fmt_size(spec['size']):>12}{self.fmt_size(spec['read'])+'/s':>12}{self.fmt_size(spec['write'])+'/s':>12}  {spec['label']}")
+        print()
+
+    def cmd_attachdisk(self, *args):
+        if len(args) < 2:
+            print("Usage: ATTACHDISK <slot> <media> [label]")
+            print("       Example: ATTACHDISK HDD0 hdd-vintage \"20MB ST-225\"")
+            return
+        slot, media = args[0], args[1].lower()
+        label = " ".join(args[2:]) if len(args) > 2 else slot.upper()
+        if media not in MEDIA_SPECS or MEDIA_SPECS[media]["family"] not in STORAGE_DISK_FAMILIES:
+            print("?ATTACHDISK requires a hard-disk/SSD/NVMe media profile (type DISKS)")
+            return
+        if slot in self.drives:
+            print(f"?SLOT OCCUPIED: '{slot}' (DETACH first)")
+            return
+        path = self._disk_path_for_slot(slot)
+        try:
+            d = VirtualDisk.create(path, media, label)
+            self.drives[slot] = d
+            self.active = slot
+            self._play_spinup(d.spec)
+            print()
+            self._show_disk_summary(d, path, slot=slot)
+            print(f"  Storage role:    INSTALLATION TARGET\n  Image:           {path}\n")
+        except Exception as e:
+            print(f"?ATTACHDISK FAILED: {e}")
+
+    def cmd_os(self, *args):
+        if not args:
+            by_family = {family: [] for family in OS_FAMILY_ORDER}
+            for key, spec in OS_PROFILES.items():
+                by_family.setdefault(spec["family"], []).append((key, spec))
+            print("\n───── OPERATING SYSTEM PROFILES ─────")
+            for family in OS_FAMILY_ORDER:
+                entries = by_family.get(family, [])
+                if not entries:
+                    continue
+                print(f"\n  [{family}]")
+                for key, spec in entries:
+                    print(f"    {key:<16} {spec['label']} ({spec['year']})")
+            print("\nUsage: OS <OS_ID>   or   INSTALL [OS_ID] [DISK_SLOT]\n")
+            return
+        key = args[0].upper()
+        if key not in OS_PROFILES:
+            print(f"?UNKNOWN OS: {key} (type OS for a list)")
+            return
+        p = OS_PROFILES[key]
+        print(f"\n  {p['label']} [{key}]")
+        print(f"  Family:          {p['family']}")
+        print(f"  Release era:     {p['year']}")
+        print(f"  Minimum RAM:     {p['min_ram_mb']}MB")
+        print(f"  Installation:    {self.fmt_size(p['install_size'])} transfer from {MEDIA_SPECS[p['source_media']]['label']}")
+        print(f"  Installed size:  {self.fmt_size(p['installed_size'])}")
+        print(f"  Filesystems:     {', '.join(p['filesystems'])}")
+        print(f"  Boot:             {' / '.join(p['boot'])}")
+        print(f"  Minimum disk:     {p['min_disk_mb']}MB\n")
+
+    def _choose_os(self) -> Optional[str]:
+        self.cmd_os()
+        key = input("OS ID to install: ").strip().upper()
+        return key if key in OS_PROFILES else None
+
+    def _choose_disk(self) -> Optional[str]:
+        candidates = [(slot, d) for slot, d in self.drives.items() if not d.is_audio and d.spec["family"] in STORAGE_DISK_FAMILIES]
+        if not candidates:
+            print("?NO HARD DISK ATTACHED. Use DISKS then ATTACHDISK first.")
+            return None
+        if len(candidates) == 1:
+            return candidates[0][0]
+        print("\nAvailable installation targets:")
+        for slot, d in candidates:
+            print(f"  {slot:<10} {d.spec['label']:<34} {self.fmt_size(d.size)}")
+        slot = input("Disk slot: ").strip()
+        return slot if any(slot == s for s, _ in candidates) else None
+
+    def _simulate_install_transfer(self, profile: dict, disk: VirtualDisk):
+        source = MEDIA_SPECS[profile["source_media"]]
+        target_read, target_write = disk.get_effective_speeds()
+        source_rate = source["read"]
+        target_rate = target_write
+        cpu = CPU_RIGS.get(self.cpu_id, CPU_RIGS["GENERIC"])
+        cpu_factor = min(1.0, cpu["score"] / 110.0)
+        if cpu_factor <= 0:
+            cpu_factor = 0.01
+        effective = min(source_rate, target_rate)
+        if self.host_rate:
+            effective = min(effective, self.host_rate * KB)
+        effective = max(1, int(effective * (0.72 + 0.28 * cpu_factor)))
+        total = int(profile["install_size"])
+        chunk = max(32 * KB, min(512 * KB, effective // 4))
+        done = 0
+        self.progress_start()
+        print(f"\n[{source['label']}] Reading installation media...")
+        print(f"Target: {disk.label} ({disk.spec['label']})")
+        print(f"Transfer path: {self.fmt_size(source_rate)}/s source → {self.fmt_size(target_rate)}/s target")
+        while done < total:
+            n = min(chunk, total - done)
+            time.sleep(n / effective)
+            done += n
+            self.progress(done, total, "INSTALL", 0, 0, done)
+        return effective
+
+    def cmd_install(self, *args):
+        os_id = args[0].upper() if args else self._choose_os()
+        if not os_id or os_id not in OS_PROFILES:
+            print("?UNKNOWN OR CANCELED OS SELECTION")
+            return
+        profile = OS_PROFILES[os_id]
+        slot = args[1] if len(args) > 1 else (self.active if self.active in self.drives else self._choose_disk())
+        if not slot or slot not in self.drives:
+            print("?NO VALID INSTALLATION TARGET")
+            return
+        disk = self.drives[slot]
+        if disk.spec["family"] not in STORAGE_DISK_FAMILIES:
+            print("?INSTALL TARGET MUST BE A HARD DISK, SSD, OR NVMe DEVICE")
+            return
+
+        issues = _os_platform_compatibility(profile, self, disk)
+        print(f"\n───── {profile['label'].upper()} INSTALLER ─────")
+        print(f"Target: {slot} / {disk.label} / {disk.spec['label']}")
+        if issues:
+            print("\n? COMPATIBILITY CHECK FAILED")
+            for issue in dict.fromkeys(issues):
+                print(f"  - {issue}")
+            print("\nInstallation canceled before media transfer.\n")
+            return
+        print("✓ Platform compatibility check passed.")
+
+        product_key = ""
+        if profile["family"] == "Windows":
+            print("\nProduct Key")
+            print("Enter your product key, or type CRACK to generate a key.")
+            entered = input("Product key [CRACK]: ").strip()
+            if not entered or entered.upper() == "CRACK":
+                product_key = f"RM-{os_id.replace('-', '')}-CRACK-{random.randint(0, 9999):04d}"
+                print(f"  Cracked key: {product_key}")
+                print("  [RetroMedia] Product key accepted.")
+            else:
+                product_key = entered
+                print("  [RetroMedia] Product key accepted.")
+
+        print("\nInstallation will format the target and replace its current virtual contents.")
+        if input("Continue? [y/N] ").strip().lower() != "y":
+            print("Installation canceled.\n")
+            return
+
+        try:
+            disk.format()
+            print(f"\nFormatting target as {profile['filesystems'][0]}...")
+            time.sleep(min(1.5, max(0.2, disk.spec.get("seek_ms", 0) / 1000.0)))
+            effective = self._simulate_install_transfer(profile, disk)
+            installed_size = int(profile.get("installed_size", profile["install_size"]))
+            if installed_size > disk.size:
+                raise MediaError(f"installed footprint requires {self.fmt_size(installed_size)}; target capacity is {self.fmt_size(disk.size)}")
+            disk.installed_footprint = installed_size
+            disk.save()
+            adaptation = {
+                "os_id": os_id,
+                "os": profile["label"],
+                "family": profile["family"],
+                "year": profile["year"],
+                "product_key": product_key if profile["family"] == "Windows" else "",
+                "product_key_mode": "crack" if product_key and "CRACK" in product_key else ("entered" if product_key else "none"),
+                "filesystem": profile["filesystems"][0],
+                "boot": profile["boot"][0],
+                "source_media": profile["source_media"],
+                "install_size": profile["install_size"],
+                "installed_size": installed_size,
+                "effective_transfer_rate": effective,
+                "installed_at": datetime.now().isoformat(timespec="seconds"),
+                "hardware": {
+                    "cpu": self.cpu_id,
+                    "motherboard": self.motherboard_id,
+                    "ram_mb": self.system_ram_mb,
+                    "gpu": self.gpu.model_id if self.gpu else "",
+                    "storage": disk.media,
+                },
+            }
+            disk.adaptations.append(adaptation)
+            # Keep a compact, real file on the virtual disk representing the installation record.
+            manifest = tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False, encoding="utf-8")
+            try:
+                json.dump(adaptation, manifest, indent=2, ensure_ascii=False)
+                manifest.close()
+                disk.add_file(manifest.name, "RETROMEDIA_OS_INSTALL.json")
+            finally:
+                try:
+                    os.unlink(manifest.name)
+                except OSError:
+                    pass
+            disk.save()
+            print("\n✓ OS INSTALLATION COMPLETE")
+            print(f"  Adaptation:      {profile['label']}")
+            print(f"  Filesystem:      {adaptation['filesystem']}")
+            print(f"  Boot:            {adaptation['boot']}")
+            print(f"  Transfer rate:   {self.fmt_size(effective)}/s effective")
+            print(f"  Installed size:  {self.fmt_size(installed_size)}")
+            print(f"  Disk usage:      {self.fmt_size(disk.used)} / {self.fmt_size(disk.size)}")
+            print(f"  Adaptations:     {len(disk.adaptations)}")
+            print("  Status:          INSTALLED\n")
+        except Exception as e:
+            print(f"\n?INSTALL FAILED: {e}\n")
+
+    def cmd_adaptations(self, *args):
+        slot = args[0] if args else self.active
+        if not slot or slot not in self.drives:
+            print("?NO DISK SLOT SELECTED")
+            return
+        d = self.drives[slot]
+        print(f"\n───── RIG ADAPTATIONS: [{slot}] {d.label} ─────")
+        if not d.adaptations:
+            print("  (no operating system adaptations installed)\n")
+            return
+        for i, a in enumerate(d.adaptations, 1):
+            print(f"  {i:02d}. {a['os']} [{a['os_id']}] — {a['filesystem']} / {a['boot']} / {a['installed_at']}")
+        print()
+
     def cmd_help(self, *args):
         print("""
 RETROMEDIA COMMANDS:
 
-  CREATE <file> <media> [label]                    Create a new virtual medium (Data or Audio CD)
-  LOAD <file>                                      Insert / load a medium
-  EJECT                                            Eject the current medium
-  INFO                                             Show medium information
-  DIR / LS                                         List files (or audio tracks) on medium
-  COPY <src> [dest]                                Write host file → Data medium
-  EXTRACT <name|num> [dest]                        Extract data file or Audio CD track → host
-  DELETE / RM <name>                               Delete file from medium
-  FORMAT                                           Erase medium
-  FINALIZE                                         Close/finalize optical medium
-  LITESCRIBE <image>                               Etch a LightScribe label onto the disc
-  MEDIA                                            List supported media types
+  CREATE <file> <media> [label]                     Create a new virtual medium (Data or Audio CD)
+  LOAD <file>                                       Insert / load a medium
+  EJECT                                             Eject the current medium
+  INFO                                              Show medium information
+  DIR / LS                                          List files (or audio tracks) on medium
+  COPY <src> [dest]                                 Write host file → Data medium
+  EXTRACT <name|num> [dest]                         Extract data file or Audio CD track → host
+  DELETE / RM <name>                                Delete file from medium
+  FORMAT                                            Erase medium
+  FINALIZE                                          Close/finalize optical medium
+  LITESCRIBE <image>                                Etch a LightScribe label onto the disc
+  MEDIA                                             List supported media types
 
 BUFFER, PROTECTION & COPY CONTROL:
-  PROTECTION <NONE|SAFEDISC|SECUROM|CACTUS|TRACK0> Set copy protection (Anti-Rip):
-                                                       NONE     [DEFAULT]
-                                                       SAFEDISC (Introduced in 1998 by Macrovision 
-                                                                  Corporation to disrupt optical 
-                                                                  disc duplication.)
-                                                       SECUROM  (Introduced in 1998 by Sony DADC to 
-                                                                  prevent copying and reverse 
-                                                                  engineering of software.)
-                                                       CACTUS   (Developed by Israeli firm Midbar 
-                                                                  Technologies, Cactus Data Shield 
-                                                                  is copy protection for audio CDs.) 
-                                                       TRACK0   (1980s floppy disk copy protection 
-                                                                  using weak-bit and track 
-                                                                  anomalies.)
-  PIRATE ON|OFF                                    Toggle Admin Mode to bypass copy protections
-  CLONE [dest_file.iso]                            Export a raw sector-by-sector clone
-  RIP                                              Batch extract all tracks from an Audio CD
-  BURN-PROOF ON|OFF                                Enable/disable Burn-Proof protection
-  JUSTLINK ON|OFF                                  Enable/disable JustLink protection
-  OVERBURN ON|OFF                                  Allow writing past logical disc capacity (+5%)
-  ENGINE <name>                                    Set optical burning engine:
-                                                       NERO     (Nero Burning ROM) [DEFAULT]
-                                                       ASHAMPOO (Ashampoo Burning Studio)
-                                                       ROXIO    (Roxio Easy CD Creator)
-                                                       ALCOHOL  (Alcohol 120%)
-                                                       CLONECD  (CloneCD)
-                                                       IMGBURN  (ImgBurn)
-  BUFFER                                           Show current recorder settings
-  HOSTRATE <KBps>|OFF                              Cap host throughput (min with media rate)
+  PROTECTION <NONE|SAFEDISC|SECUROM|CACTUS|TRACK0>  Set copy protection (Anti-Rip):
+                                                        NONE     [DEFAULT]
+                                                        SAFEDISC (Introduced in 1998 by Macrovision 
+                                                                   Corporation to disrupt optical 
+                                                                   disc duplication.)
+                                                        SECUROM  (Introduced in 1998 by Sony DADC to 
+                                                                   prevent copying and reverse 
+                                                                   engineering of software.)
+                                                        CACTUS   (Developed by Israeli firm Midbar 
+                                                                   Technologies, Cactus Data Shield 
+                                                                   is copy protection for audio CDs.) 
+                                                        TRACK0   (1980s floppy disk copy protection 
+                                                                   using weak-bit and track 
+                                                                   anomalies.)
+  PIRATE ON|OFF                                     Toggle Admin Mode to bypass copy protections
+  CLONE [dest_file.iso]                             Export a raw sector-by-sector clone
+  RIP                                               Batch extract all tracks from an Audio CD
+  BURN-PROOF ON|OFF                                 Enable/disable Burn-Proof protection
+  JUSTLINK ON|OFF                                   Enable/disable JustLink protection
+  OVERBURN ON|OFF                                   Allow writing past logical disc capacity (+5%)
+  ENGINE <name>                                     Set optical burning engine:
+                                                        NERO     (Nero Burning ROM) [DEFAULT]
+                                                        ASHAMPOO (Ashampoo Burning Studio)
+                                                        ROXIO    (Roxio Easy CD Creator)
+                                                        ALCOHOL  (Alcohol 120%)
+                                                        CLONECD  (CloneCD)
+                                                        IMGBURN  (ImgBurn)
+  BUFFER                                            Show current recorder settings
+  HOSTRATE <KBps>|OFF                               Cap host throughput (min with media rate)
 
 AUDIO CD COMMANDS:
-  ADD / BURN <audio> [title]                       Burn an audio track onto the Audio CD
-  PLAY [track_number]                              Play the virtual Audio CD using ffplay
-  ARTIST <name>                                    Set disc artist
-  ALBUM <title>                                    Set disc album title
+  ADD / BURN <audio> [title]                        Burn an audio track onto the Audio CD
+  PLAY [track_number]                               Play the virtual Audio CD using ffplay
+  ARTIST <name>                                     Set disc artist
+  ALBUM <title>                                     Set disc album title
 
 SYSTEM / HARDWARE RIG COMMANDS:
-  ATTACHCPU <CPU_ID>                               Attach a historical CPU profile
-  DETACHCPU                                        Remove the CPU profile
-  CPU / CPUINFO                                    Show attached CPU profile
-  CPUS                                             List historical CPU profiles
-  CPUBENCH [LOAD]                                  Synthetic CPU workload model (0-100)
-  ATTACHMB <MODEL_ID>                              Attach a historical motherboard profile
-  DETACHMB                                         Remove the motherboard profile
-  MB / MBINFO                                      Show attached motherboard
-  MOTHERBOARDS                                     List historical motherboard profiles
-  CHECKSYSTEM                                      Validate CPU / motherboard / GPU compatibility
-  BENCH [WxH] [BPP] [GEOM] [TEX] [FX]              System GPU benchmark using attached platform
+  ATTACHCPU <CPU_ID>                                Attach a historical CPU profile
+  DETACHCPU                                         Remove the CPU profile
+  CPU / CPUINFO                                     Show attached CPU profile
+  CPUS                                              List historical CPU profiles
+  CPUBENCH [LOAD]                                   Synthetic CPU workload model (0-100)
+  ATTACHMB <MODEL_ID>                               Attach a historical motherboard profile
+  DETACHMB                                          Remove the motherboard profile
+  MB / MBINFO                                       Show attached motherboard
+  MOTHERBOARDS                                      List historical motherboard profiles
+  CHECKSYSTEM                                       Validate CPU / motherboard / GPU compatibility
+  BENCH [WxH] [BPP] [GEOM] [TEX] [FX]               System GPU benchmark using attached platform
+  RAM / RAMINFO                                     Show installed RAM and motherboard limit
+  RAMPROFILES                                       List historical RAM module profiles
+  ADDRAM <RAM_MODEL_ID>                             Add a RAM module up to the platform maximum
+
+OPERATING SYSTEM / RIG ADAPTATION COMMANDS:
+  DISKS                                             List hard-disk/SSD/NVMe installation targets
+  ATTACHDISK <slot> <media> [label]                 Create and attach a virtual storage device
+  OS [OS_ID]                                        List or inspect historical OS profiles
+  INSTALL [OS_ID] [DISK_SLOT]                       Install an OS adaptation with authentic transfer constraints
+  ADAPTATIONS [DISK_SLOT]                           Show installed OS adaptations
 
 DRIVE RIG COMMANDS:
-  ATTACH <slot> <file> [MODEL_ID]                  Load a drive into the rig (e.g. TEAC-FD235HF)
-  DETACH <slot>                                    Remove a drive from the rig
-  HARDWARE                                         List authentic historical drive models
-  DRIVES                                           List all attached drives
-  USE <slot>                                       Switch active drive
-  XFER <slot>:<file> <slot>:<file>                 Copy file between drives
-  XMOVE <slot>:<file> <slot>:<file>                Move file between drives
+  ATTACH <slot> <file> [MODEL_ID]                   Load a drive into the rig (e.g. TEAC-FD235HF)
+  DETACH <slot>                                     Remove a drive from the rig
+  HARDWARE                                          List authentic historical drive models
+  DRIVES                                            List all attached drives
+  USE <slot>                                        Switch active drive
+  XFER <slot>:<file> <slot>:<file>                  Copy file between drives
+  XMOVE <slot>:<file> <slot>:<file>                 Move file between drives
 
 GPU RIG COMMANDS:
-  ATTACHGPU <MODEL_ID> [SLI_COUNT]                 Attach a historical GPU rig
-  DETACHGPU                                        Remove the GPU rig
-  GPU / GPUINFO                                    Show attached GPU
-  GPUS                                             List historical GPU models
-  GPUCAPS                                          Show GPU API/feature capabilities
-  GPUHOST <CPU_ID> <RAM_MB> [BUS]                  Configure host bottlenecks
-  GPUCPUS                                          List host CPU profiles
-  GPUBENCH [WxH] [BPP] [GEOM] [TEX] [FX]           Run synthetic GPU performance model
+  ATTACHGPU <MODEL_ID> [SLI_COUNT]                  Attach a historical GPU rig
+  DETACHGPU                                         Remove the GPU rig
+  GPU / GPUINFO                                     Show attached GPU
+  GPUS                                              List historical GPU models
+  GPUCAPS                                           Show GPU API/feature capabilities
+  GPUHOST <CPU_ID> <RAM_MB> [BUS]                   Configure host bottlenecks
+  GPUCPUS                                           List host CPU profiles
+  GPUBENCH [WxH] [BPP] [GEOM] [TEX] [FX]            Run synthetic GPU performance model
 
 HOST COMMANDS:
-  HOSTLS [path]                                    List host directory files
-  CD <path>                                        Change host directory
-  PWD                                              Show current host directory
-  QUIT / EXIT                                      Leave program
+  HOSTLS [path]                                     List host directory files
+  CD <path>                                         Change host directory
+  PWD                                               Show current host directory
+  QUIT / EXIT                                       Leave program
 """)
 
     def cmd_media(self, *args):
@@ -1723,7 +2212,7 @@ HOST COMMANDS:
             return
 
         if os.path.exists(path) and input(f"'{path}' exists. Overwrite? [y/N] ").strip().lower() != "y":
-            print("Cancelled.")
+            print("Canceled.")
             return
 
         try:
@@ -1968,6 +2457,63 @@ HOST COMMANDS:
         except (ValueError, MediaError) as e:
             print(f"?GPUBENCH FAILED: {e}")
 
+    def cmd_ram(self, *args):
+        if not self.motherboard_id:
+            print(f"\n  System RAM:        {self.system_ram_mb}MB")
+            print("  Motherboard:       NONE")
+            print("  Maximum:           constrained by CPU/profile until a motherboard is attached")
+            print("  Use RAMPROFILES to list historical modules.\n")
+            return
+        mb = MOTHERBOARD_RIGS[self.motherboard_id]
+        print("\n───── SYSTEM RAM RIG ─────")
+        print(f"  Installed:         {self.system_ram_mb}MB")
+        print(f"  Motherboard:       {mb['label']} [{self.motherboard_id}]")
+        print(f"  RAM types:         {', '.join(mb['ram_type'])}")
+        print(f"  Maximum:           {mb['max_ram_mb']}MB")
+        print(f"  Remaining:         {max(0, mb['max_ram_mb'] - self.system_ram_mb)}MB")
+        print()
+
+    def cmd_raminfo(self, *args):
+        self.cmd_ram(*args)
+
+    def cmd_ramprofiles(self, *args):
+        print("\n───── HISTORICAL RAM MODULE PROFILES ─────")
+        print(f"{'MODEL ID':<22}{'YEAR':>6}{'TYPE':>9}{'CAPACITY':>11}{'SPEED':>12}  DESCRIPTION")
+        print("-" * 94)
+        for ram_id, r in RAM_PROFILES.items():
+            print(f"{ram_id:<22}{r['year']:>6}{r['type']:>9}{str(r['capacity_mb'])+'MB':>11}{r['speed']:>12}  {r['label']}")
+        print("\nAdd a module with: ADDRAM <MODEL_ID>\n")
+
+    def cmd_addram(self, *args):
+        if not args:
+            print("Usage: ADDRAM <RAM_MODEL_ID>")
+            print("Type RAMPROFILES for historical module profiles.")
+            return
+        ram_id = args[0].upper()
+        if ram_id not in RAM_PROFILES:
+            print(f"?UNKNOWN RAM PROFILE: {ram_id} (type RAMPROFILES for a list)")
+            return
+        if not self.motherboard_id:
+            print("?NO MOTHERBOARD ATTACHED")
+            return
+        mb = MOTHERBOARD_RIGS[self.motherboard_id]
+        r = RAM_PROFILES[ram_id]
+        if r["type"] not in mb["ram_type"]:
+            print(f"?ADDRAM FAILED: {mb['chipset']} uses {', '.join(mb['ram_type'])}; {r['type']} is not supported")
+            return
+        cpu = CPU_RIGS[self.cpu_id]
+        cpu_max = cpu["ram_max"]
+        new_total = self.system_ram_mb + r["capacity_mb"]
+        max_ram = min(mb["max_ram_mb"], cpu_max)
+        if new_total > max_ram:
+            print(f"?ADDRAM FAILED: {self.system_ram_mb}MB + {r['capacity_mb']}MB = {new_total}MB; maximum available is {max_ram}MB")
+            return
+        self.system_ram_mb = new_total
+        if self.gpu:
+            self.gpu.ram_mb = self.system_ram_mb
+        print(f"✓ RAM ADDED: {r['label']} [{ram_id}] +{r['capacity_mb']}MB")
+        print(f"  System RAM:       {self.system_ram_mb}MB / {max_ram}MB max\n")
+
     def cmd_cpu(self, *args):
         if args:
             cpu_id = args[0].upper()
@@ -1997,7 +2543,7 @@ HOST COMMANDS:
 
     def cmd_cpus(self, *args):
         print("\n───── HISTORICAL CPU RIGS ─────")
-        print(f"{'CPU ID':<20}{'YEAR':>6}{'CLOCK':>11}{' SOCKET':<20}{'RAM':>10}  DESCRIPTION")
+        print(f"{'CPU ID':<20}{'YEAR':>6}{'CLOCK':>11} {'SOCKET':<20}{'RAM':>10}  DESCRIPTION")
         print("-" * 112)
         for cpu_id, c in CPU_RIGS.items():
             print(f"{cpu_id:<20}{c['year']:>6}{str(c['clock_mhz'])+'MHz':>11} {'/'.join(c['socket']):<20}{str(c['ram_max'])+'MB':>10}  {c['label']}")
@@ -2709,7 +3255,7 @@ HOST COMMANDS:
             print("?NO DISK INSERTED")
             return
         if input("Finalize this medium? No further writes/tracks can be added. [y/N] ").strip().lower() != "y":
-            print("Cancelled.")
+            print("Canceled.")
             return
         try:
             if self.disk.spec["family"] in ("optical", "audio-cd"):
@@ -2730,7 +3276,7 @@ HOST COMMANDS:
             print("?NO DISK INSERTED")
             return
         if input(f"Format '{self.disk.label}'? All data will be lost! [y/N] ").strip().lower() != "y":
-            print("Cancelled.")
+            print("Canceled.")
             return
         try:
             self.disk.format()
@@ -2932,10 +3478,10 @@ HOST COMMANDS:
 
     def run(self):
         print("""
-╔══════════════════════════════════════════════════════╗
-║         RETROMEDIA ULTIMATE - VIRTUAL MEDIA          ║
-║ Data Disks • Audio CDs • Hard Disks • Hardware Rigs  ║
-╚══════════════════════════════════════════════════════╝
+╔══════════════════════════════════════════════════════════╗
+║           RETROMEDIA ULTIMATE - VIRTUAL MEDIA            ║
+║   Data Storage • Audio CDs • Hard Disks • H/W+OS Rigs    ║
+╚══════════════════════════════════════════════════════════╝
 Type HELP for commands, MEDIA for media types.
 """)
         commands = {
@@ -2972,6 +3518,10 @@ Type HELP for commands, MEDIA for media types.
             "ATTACHMB": self.cmd_attachmb, "DETACHMB": self.cmd_detachmb,
             "MB": self.cmd_mb, "MBINFO": self.cmd_mbinfo, "MOTHERBOARDS": self.cmd_motherboards,
             "CHECKSYSTEM": self.cmd_checksystem, "BENCH": self.cmd_bench,
+            "RAM": self.cmd_ram, "RAMINFO": self.cmd_raminfo, "RAMPROFILES": self.cmd_ramprofiles,
+            "ADDRAM": self.cmd_addram,
+            "DISKS": self.cmd_disks, "ATTACHDISK": self.cmd_attachdisk,
+            "OS": self.cmd_os, "INSTALL": self.cmd_install, "ADAPTATIONS": self.cmd_adaptations,
             "HOSTLS": self.cmd_hostls, "CD": self.cmd_cd, "PWD": self.cmd_pwd,
         }
 
@@ -3011,7 +3561,7 @@ Type HELP for commands, MEDIA for media types.
 
 
 def main():
-    parser = argparse.ArgumentParser(description="RetroMedia Ultimate - virtual media and Audio CD emulator")
+    parser = argparse.ArgumentParser(description="RetroMedia - Virtual removable & fixed media and rig simulator")
     parser.add_argument("disk", nargs="?", help="Medium file to auto-load")
     args = parser.parse_args()
 
